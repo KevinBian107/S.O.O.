@@ -87,9 +87,9 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     }
 
     def __init__(self, render_mode: Optional[str] = None):
-        self.gravity = 19.8
+        self.gravity = 9.8
         self.masscart = 1.0
-        self.masspole = 1.5
+        self.masspole = 2.5
         self.total_mass = self.masspole + self.masscart
         self.length = 0.5  # actually half the pole's length
         self.polemass_length = self.masspole * self.length

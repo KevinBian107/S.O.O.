@@ -1,18 +1,11 @@
-import gymnasium as gym
-import math
 import random
-import matplotlib
-import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
-
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 class ReplayMemory(object):
 
@@ -38,9 +31,14 @@ class DQN(nn.Module):
         self.layer2 = nn.Linear(128, 128)
         self.layer3 = nn.Linear(128, n_actions)
 
-    # Called with either one element to determine next action, or a batch
-    # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
+        # if n_actions is different, matrix mismatch
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+
+    # def forward(self, x):
+    #     x = F.relu(self.layer1(x))
+    #     x = F.relu(self.layer2(x))
+    #     x = torch.sigmoid(self.layer3(x))  # Scale output to [-1, 1]
+    #     return x * 2
