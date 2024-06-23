@@ -15,7 +15,7 @@ import gym
 from gym.envs.registration import register
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from networks import ReplayMemory, DQN, Transition
+from dqn_networks import ReplayMemory, DQN, Transition
 from env_pendulum import PendulumEnv
 
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -224,7 +224,7 @@ def main():
                 break
         
 
-    torch.save(policy_net.state_dict(), "policy_net_final_task.pth")
+    torch.save(policy_net.state_dict(), "params/pendulum_dqn_continuous.pth")
     print('Complete')
     plot_reward(show_result=True)
     plt.ioff()

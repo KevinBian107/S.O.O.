@@ -36,9 +36,3 @@ class DQN(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
-
-    # def forward(self, x):
-    #     x = F.relu(self.layer1(x))
-    #     x = F.relu(self.layer2(x))
-    #     x = torch.sigmoid(self.layer3(x))  # Scale output to [-1, 1]
-    #     return x * 2
