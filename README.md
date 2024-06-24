@@ -7,19 +7,19 @@ Testing for Continual Learning algorithms using simple OpenAI Gym Cartpool/Pendu
 DQN Continuous + Pendulum Control
 
 <div style="text-align: center;">
-    <img src="demos/dqn_con.png" alt="" style="width:100%; height:auto;">
+    <img src="demos/dqn_con.png" alt="" style="width:50%; height:auto;">
 </div>
 
 DQN Discrete + Pendulum Control
 
 <div style="text-align: center;">
-    <img src="demos/dqn_dis.png" alt="" style="width:100%; height:auto;">
+    <img src="demos/dqn_dis.png" alt="" style="width:50%; height:auto;">
 </div>
 
 DQN Discrete Retrained + Pendulum Control
 
 <div style="text-align: center;">
-    <img src="demos/dqn_dis_retrain.png" alt="" style="width:100%; height:auto;">
+    <img src="demos/dqn_dis_retrain.png" alt="" style="width:50%; height:auto;">
 </div>
 
 ## Demos of Trained Results
