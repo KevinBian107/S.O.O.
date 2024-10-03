@@ -1,27 +1,3 @@
-# Continual Learning Environment
-Testing for Continual Learning algorithms using simple OpenAI Gym Cartpool/Pendulum Environment
-(Currently trying to use AGOP and RFM in training)
-
-## Deep Q Network Training on Pendulum Control
-
-DQN Continuous + Pendulum Control
-
-<div style="text-align: center;">
-    <img src="demos/dqn_con.png" alt="" style="width:50%; height:auto;">
-</div>
-
-DQN Discrete + Pendulum Control
-
-<div style="text-align: center;">
-    <img src="demos/dqn_dis.png" alt="" style="width:50%; height:auto;">
-</div>
-
-DQN Discrete Retrained + Pendulum Control
-
-<div style="text-align: center;">
-    <img src="demos/dqn_dis_retrain.png" alt="" style="width:50%; height:auto;">
-</div>
-
 ## Demos of Trained Results
 
 Pendulum Random Control

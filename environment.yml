@@ -1,0 +1,16 @@
+name: vnl_extension
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9  # or your preferred Python version
+  - numpy
+  - matplotlib
+  - pytorch
+  - torchvision
+  - torchaudio
+  - gym
+  - pip
+  - pip:
+      - gym[classic_control]  # for environments like Pendulum
+      - ipython  # For Jupyter notebooks if needed
