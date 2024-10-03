@@ -16,8 +16,8 @@ from gym.envs.registration import register
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from dqn_networks import ReplayMemory, DQN, Transition
-from env_pendulum import PendulumEnv
+from mvp.dqn_networks import ReplayMemory, DQN, Transition
+from mvp.env_pendulum import PendulumEnv
 
 is_ipython = "inline" in matplotlib.get_backend()
 if is_ipython:
@@ -34,7 +34,7 @@ LR = 0.00001
 BUFFER = 100000
 
 register(
-    id="Pendulum-v0", entry_point="env_pendulum:PendulumEnv", max_episode_steps=300
+    id="Pendulum-v0", entry_point="mvp.env_pendulum:PendulumEnv", max_episode_steps=300
 )
 env = gym.make("Pendulum-v0")
 
