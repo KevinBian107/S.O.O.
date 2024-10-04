@@ -113,6 +113,15 @@ class UPN(nn.Module):
         )
 
     def forward(self, state, action, next_state):
+        '''
+        Want to encode imitation state, should enter network, 
+        change here, forward modle takes in the state of paired imitation coordinate. 
+        
+        Called by compute_upn_loss as upn.
+
+        Let the forward model here learn the dynamics from imitation data and one line optimize from gradient
+        '''
+
         z = self.encoder(state)
         z_next = self.encoder(next_state)
         z_pred = self.dynamics(torch.cat([z, action], dim=-1))
@@ -149,14 +158,27 @@ class ActorCriticUPN(nn.Module):
         return action_mean, action_std, value
 
     def get_action_and_value(self, state, action=None):
+        '''Main contribution of UPN, action envisioned added to selection phase'''
+
         z = self.upn.encoder(state)
-        action_mean, action_std, value = self(state)
+        action_mean, action_std, value = self(state) # action from actor network
         probs = Normal(action_mean, action_std)
+
+        # Predict the next state using forward dynamics model (if needed for refinement)
+        z_next = self.upn.encoder(state)  # Simulate the next state from the encoder
+        action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))  # UPN predicted action
+
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), value
+
+        # Combine actions from PPO policy and UPN's inverse dynamics model
+        combined_action = 0.5 * action + 0.5 * action_pred  # Weight the actions 0.5 for now, do Kalman filter thing later
+
+        return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), value
 
 def compute_upn_loss(upn, state, action, next_state):
+    '''Main contribution of UPN, forward envisioning process contributing to the loss'''
+
     z, z_next, z_pred, action_pred, state_recon, next_state_pred = upn(state, action, next_state)
     
     # Reconstruction loss
@@ -310,9 +332,8 @@ def main():
     plt.show()
 
     # Save the model
-    torch.save(actor_critic.state_dict(), "mvp/params/pendulum_fmppo_continuous.pth")
+    torch.save(actor_critic.state_dict(), f"mvp/params/pendulum_fmppo_{ITERATIONS}_KL_{TARGET_KL}.pth")
 
-    # Uncomment the following lines if you want to render and save a video
     # video_env = RecordVideo(env, video_folder="./videos", episode_trigger=lambda x: True)
     # state, _ = video_env.reset()
     # state = torch.FloatTensor(state).unsqueeze(0).to(device)

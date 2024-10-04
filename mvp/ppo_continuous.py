@@ -36,7 +36,7 @@ VF_COEF = 0.5
 MAX_GRAD_NORM = 0.5
 BATCH_SIZE = NUM_STEPS * NUM_ENVS
 MINIBATCH_SIZE = BATCH_SIZE // 32
-ITERATIONS = 10000
+ITERATIONS = 1000
 
 ANNEAL_LR = True # Anneal the learning rate over time
 CLIP_VLOSS = True # Whether to clip the value loss
@@ -258,7 +258,7 @@ def main():
     plt.show()
 
     # Save the model
-    torch.save(actor_critic.state_dict(), "mvp/params/pendulum_ppo_continuous.pth")
+    torch.save(actor_critic.state_dict(), f"mvp/params/pendulum_ppo_{ITERATIONS}_KL_{TARGET_KL}.pth")
 
     # # Rendering and saving a video
     # video_env = RecordVideo(env, video_folder="./videos", episode_trigger=lambda x: True)
