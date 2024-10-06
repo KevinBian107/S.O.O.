@@ -12,6 +12,7 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
+from mvp.env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
 
 @dataclass
 class Args:
@@ -52,6 +53,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             # fixed it by reading Stack Overfloat
         else:
             env = gym.make(env_id)
+        
+        env = TargetVelocityWrapper(env, target_velocity=2.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -120,11 +123,13 @@ if __name__ == "__main__":
     agent = Agent(envs).to(device)
 
     if args.load_model is not None:
-        if os.path.exists(args.load_model):
-            print(f"Loading model from {args.load_model}")
-            agent.load_state_dict(torch.load(args.load_model, map_location=device))
+        save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+        data_path = os.path.join(save_dir, args.load_model)
+        if os.path.exists(data_path):
+            print(f"Loading model from {data_path}")
+            agent.load_state_dict(torch.load(data_path, map_location=device))
         else:
-            print(f"Model file not found at {args.load_model}. Starting training from scratch.")
+            print(f"Model file not found at {data_path}. Starting training from scratch.")
 
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
@@ -343,29 +348,8 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_2.pth"
+    data_filename = f"ppo_vector_vel2.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
     torch.save(agent.state_dict(), data_path)
-
-    # # After training is finished, create a new environment for evaluation with video recording enabled
-    # eval_env = gym.vector.SyncVectorEnv(
-    #     [make_env(args.env_id, 0, args.capture_video, args.exp_name, args.gamma, eval_mode=True)]
-    # )
-
-    # # Run evaluation and save the video for this run
-    # obs, _ = eval_env.reset(seed=args.seed)
-    # done = False
-
-    # while not done:
-    #     with torch.no_grad():
-    #         action, _, _, _ = agent.get_action_and_value(torch.Tensor(obs).to(device))
-
-    #     next_obs, reward, terminations, truncations, infos = eval_env.step(action.cpu().numpy())
-    #     done = np.logical_or(terminations, truncations)
-    #     obs = next_obs
-
-    # # Close the environment after recording
-    # eval_env.close()
-    # print("Evaluation finished, video saved.")

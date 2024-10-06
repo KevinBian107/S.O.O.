@@ -14,12 +14,13 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
+from env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
 
 @dataclass
 class Args:
     exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
     env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
-    total_timesteps: int = 200000
+    total_timesteps: int = 300000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -40,7 +41,7 @@ class Args:
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
     load_upn: str = "fm_vector.pth"
-    mix_coord: bool = True
+    mix_coord: bool = True # this helps greatly
 
     # upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
     # kl_coef: float = 0.1
@@ -59,6 +60,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             # fixed it by reading Stack Overfloat
         else:
             env = gym.make(env_id)
+        # env = TargetVelocityWrapper(env, target_velocity=2.0)
+        env = JumpRewardWrapper(env, jump_target_height=2.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -474,10 +477,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector.pth"
+    data_filename = f"fmppo_vector_jump.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector.pth"
+    data_filename = f"fm_vector_jump.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

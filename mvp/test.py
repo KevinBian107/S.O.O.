@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from torch.distributions import Normal
 import torch.nn as nn
 from fmppo_vector import Args
-
+from mvp.env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
+    
 # UPN model definition
 class UPN(nn.Module):
     def __init__(self, state_dim, action_dim, latent_dim):
@@ -121,7 +122,7 @@ def evaluate_model(agent, env, device, num_episodes=100):
         while not done:
             with torch.no_grad():
                 action = agent.get_action(obs)
-                obs, reward, terminated, truncated, _ = env.step(action.cpu().numpy())
+                obs, reward, terminated, truncated, info = env.step(action.cpu().numpy())
                 obs = torch.Tensor(obs).to(device)
                 episode_return += reward
                 done = terminated or truncated
@@ -134,7 +135,9 @@ if __name__ == "__main__":
     args = Args()
     # Set up vectorized environment with a single instance
     env_id = "HalfCheetah-v4"
-    env = gym.vector.SyncVectorEnv([lambda: gym.make(env_id)])
+    # env = gym.vector.SyncVectorEnv([lambda: TargetVelocityWrapper(gym.make(env_id), target_velocity=1.0)])
+    # env = gym.vector.SyncVectorEnv([lambda: gym.make(env_id)])
+    env = gym.vector.SyncVectorEnv([lambda: JumpRewardWrapper(gym.make(env_id), jump_target_height=1.0)])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the FM-PPO model
@@ -144,17 +147,18 @@ if __name__ == "__main__":
 
     # Load the PPO model
     ppo_agent = PPOAgent(env).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_2.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
+    episodde_num = 300
     # Evaluate both models for 100 episodes
-    fmppo_returns = evaluate_model(fmppo_agent, env, device, num_episodes=500)
-    ppo_returns = evaluate_model(ppo_agent, env, device, num_episodes=500)
+    fmppo_returns = evaluate_model(fmppo_agent, env, device, num_episodes=episodde_num)
+    ppo_returns = evaluate_model(ppo_agent, env, device, num_episodes=episodde_num)
 
     # Plot the results for 100 episodes
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, 101), fmppo_returns, label="FM-PPO", marker='o')
-    plt.plot(range(1, 101), ppo_returns, label="PPO", marker='o')
+    plt.plot(range(1, episodde_num+1), fmppo_returns, label="FM-PPO", marker='o')
+    plt.plot(range(1, episodde_num+1), ppo_returns, label="PPO", marker='o')
     plt.title("Episode Returns for FM-PPO and PPO")
     plt.xlabel("Episode")
     plt.ylabel("Return")
