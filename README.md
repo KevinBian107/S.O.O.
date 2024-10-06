@@ -5,9 +5,11 @@ Does UNP Belief network serve as a forward model, similar to the Cerebellum func
 ### Retrained PPO & Fm-PPO Agents on Half-Cheetah Task
 
 PPO trained on 2e5 global steps:
+
 ![Alt text](demos/vectorized_half_cheetah/fmppo_double_trained.png)
 
 Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
+
 ![Alt text](demos/vectorized_half_cheetah/ppo_double_trained.png)
 
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
