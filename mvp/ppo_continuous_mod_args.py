@@ -1,74 +1,61 @@
-import math
-import random
-import matplotlib
-import matplotlib.pyplot as plt
-from collections import namedtuple, deque
-from itertools import count
-import numpy as np
 import os
-
+import random
+import time
+import math
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 from torch.distributions import Normal
-
+from collections import deque
+from dataclasses import dataclass
 import gym
 from gym.envs.registration import register
-from gym.wrappers import RecordVideo
 from gym.wrappers import NormalizeObservation, TransformObservation, NormalizeReward, TransformReward
 
-
+# Device setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-is_ipython = "inline" in matplotlib.get_backend()
-if is_ipython:
-    from IPython import display
-plt.ion()
+# Hyperparameters using Args class
+@dataclass
+class Args:
+    exp_name: str = "ppo_pendulum"
+    seed: int = 1
+    torch_deterministic: bool = True
+    cuda: bool = True
+    env_id: str = "Pendulum-v1"
+    total_timesteps: int = 1e6  # Fix here, should be a full million
+    learning_rate: float = 3e-4
+    num_envs: int = 1
+    num_steps: int = 2048
+    gamma: float = 0.99
+    gae_lambda: float = 0.95
+    num_minibatches: int = 32
+    update_epochs: int = 10
+    norm_adv: bool = True
+    clip_coef: float = 0.2
+    ent_coef: float = 0.3
+    vf_coef: float = 0.5
+    max_grad_norm: float = 0.5
+    target_kl: float = 0.01
+    anneal_lr: bool = True
+    clip_vloss: bool = True
 
-# Hyperparameters
-LEARNING_RATE = 3e-4
-NUM_ENVS = 1
-NUM_STEPS = 2048
-GAMMA = 0.99
-GAE_LAMBDA = 0.95
-PPO_EPOCHS = 10
-CLIP_EPSILON = 0.2
-ENT_COEF = 0.3
-VF_COEF = 0.5
-MAX_GRAD_NORM = 0.5
-BATCH_SIZE = NUM_STEPS * NUM_ENVS
-MINIBATCH_SIZE = BATCH_SIZE // 16
-TOTAL_STEPS = 1e6
-ITERATIONS = TOTAL_STEPS // BATCH_SIZE
-ANNEAL_LR = True
-CLIP_VLOSS = True
-TARGET_KL = 0.01 # Target KL divergence for early stopping, lower value could prevent exploration
-# KL_COEF = 0.3
+    # to be filled in runtime
+    batch_size: int = 0
+    minibatch_size: int = 0
+    num_iterations: int = 0
 
+# Register the environment
 register(
     id="Pendulum-v1",
     entry_point='env_pendulum:PendulumEnv',
     max_episode_steps=200,
 )
 
-def create_env(seed=None):
-    '''Env generate function'''
-    env = gym.make("Pendulum-v1")
-    if seed is not None:
-        env.reset(seed=seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-    env = gym.wrappers.TransformReward(env, lambda reward: reward / 16.2736044) # normalize rewards
-    # env = gym.wrappers.RecordEpisodeStatistics(env)
-    # env = gym.wrappers.ClipAction(env)
-    # env = gym.wrappers.NormalizeObservation(env)
-    # env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-    return env
-
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    '''Add orthogonal weight initialization for the layers for networks'''
-
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
@@ -122,7 +109,7 @@ class ActorCritic(nn.Module):
         self.critic = nn.Sequential(
             layer_init(nn.Linear(n_states, 64)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64, 64)),
+            layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 1))
         )
@@ -141,84 +128,40 @@ class ActorCritic(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), value
 
-def plot_reward(episode_rewards, show_result=False, avg_interval=20*BATCH_SIZE):
-    '''avg_interval need to consider BATCHED size'''
+def create_env(seed=None):
+    env = gym.make("Pendulum-v1")
+    if seed is not None:
+        env.reset(seed=seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+    return env
 
+def plot_reward(episode_rewards, show_result=False, avg_interval=10000):
     plt.figure(1)
     reward_episode = torch.tensor(episode_rewards, dtype=torch.float)
-    
     if show_result:
         plt.title("Result")
     else:
         plt.clf()
         plt.title("Training...")
-
     plt.xlabel("Episode")
     plt.ylabel("Rewards")
     plt.plot(reward_episode.numpy(), label="Episode Reward")
 
-    # Plot the moving average for every 50 episodes
     if len(reward_episode) >= avg_interval:
-        # Calculate average reward for every `avg_interval` episodes
         avg_rewards = reward_episode.unfold(0, avg_interval, avg_interval).mean(1)
         avg_rewards_repeated = avg_rewards.repeat_interleave(avg_interval)
-        
-        # In case the number of episodes is not perfectly divisible by avg_interval, trim the result
         avg_rewards_repeated = avg_rewards_repeated[:len(reward_episode)]
-        
         plt.plot(avg_rewards_repeated.numpy(), label=f"Average Reward Every {avg_interval} Episodes", linestyle='--', color='red')
 
     plt.legend()
+    plt.draw()  # Update the plot
     plt.pause(0.001)
 
-    if is_ipython:
-        if not show_result:
-            display.display(plt.gcf())
-            display.clear_output(wait=True)
-        else:
-            display.display(plt.gcf())
-
-def plot_reward_real_time(episode_rewards, show_result=False, avg_interval=20*BATCH_SIZE):
-    """Plot the reward achieved"""
-
-    plt.figure(1)
-    reward_episode = torch.tensor(episode_rewards, dtype=torch.float)
-    if show_result:
-        plt.title("Result")
-    else:
-        plt.clf()
-        plt.title("Training...")
-    plt.xlabel("Episode")
-    plt.ylabel("rwards")
-    # plt.plot(reward_episode.numpy())
-    # Take 100 episode averages and plot them too
-    if len(reward_episode) >= avg_interval:
-        means = reward_episode.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
-
-    plt.pause(0.001)  # pause a bit so that plots are updated
-    if is_ipython:
-        if not show_result:
-            display.display(plt.gcf())
-            display.clear_output(wait=True)
-        else:
-            display.display(plt.gcf())
-
-def normalize_tensor(tensor):
-    '''Normalize a tensor by subtracting the mean and dividing by the standard deviation'''
-    mean = tensor.mean()
-    std = tensor.std() + 1e-8  # Avoid division by zero
-    return (tensor - mean) / std
-
-def plot_kl(kl_values, avg_interval=20*BATCH_SIZE, show_result=False):
-    '''Plot normalized KL divergence, less than reward, reward collected at each episode, kl collected whe policy updates.'''
-
+def plot_kl(kl_values, avg_interval=100, show_result=False):
     plt.figure(2)
     kl_episode = torch.tensor(kl_values, dtype=torch.float)
-
-    # Normalize the KL values
-    kl_episode = normalize_tensor(kl_episode)
+    kl_episode = (kl_episode - kl_episode.mean()) / (kl_episode.std() + 1e-8)
 
     if show_result:
         plt.title("KL Divergence Result")
@@ -228,56 +171,47 @@ def plot_kl(kl_values, avg_interval=20*BATCH_SIZE, show_result=False):
 
     plt.xlabel("Episode")
     plt.ylabel("Normalized KL Divergence")
-
-    # Dynamically adjust avg_interval if it's too large
-    min_len = len(kl_episode)
-    avg_interval = min(avg_interval, min_len // 2)  # Adjust if avg_interval is too large
-
-    # Plot the KL values
     plt.plot(kl_episode.numpy(), label="KL Divergence", color="blue")
 
-    # Plot the moving average of the KL values
     if len(kl_episode) >= avg_interval:
         avg_kl = kl_episode.unfold(0, avg_interval, avg_interval).mean(1)
         avg_kl_repeated = avg_kl.repeat_interleave(avg_interval)
         avg_kl_repeated = avg_kl_repeated[:len(kl_episode)]
-        
         plt.plot(avg_kl_repeated.numpy(), label=f"Average KL Every {avg_interval} Episodes", linestyle='--', color='cyan')
 
     plt.legend()
+    plt.draw()  # Update the plot
     plt.pause(0.001)
 
-    if is_ipython:
-        if not show_result:
-            display.display(plt.gcf())
-            display.clear_output(wait=True)
-        else:
-            display.display(plt.gcf())
-
 def main():
-    env = create_env(seed=42)
+    args = Args()
+    args.batch_size = int(args.num_envs * args.num_steps)
+    args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    args.num_iterations = args.total_timesteps // args.batch_size
+
+    env = create_env(seed=args.seed)
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
 
     actor_critic = ActorCritic(n_states, n_actions).to(device)
-    optimizer = optim.Adam(actor_critic.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(actor_critic.parameters(), lr=args.learning_rate)
 
-    memory = PPOMemory(BATCH_SIZE)
+    memory = PPOMemory(args.batch_size)
     episode_rewards = []
 
     state, _ = env.reset()
     state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
     kl_values = []
-    for iteration in count(1):
+    for iteration in range(int(args.num_iterations)):
 
-        if ANNEAL_LR:
-            frac = 1.0 - (iteration / ITERATIONS)
-            lr_now = frac * LEARNING_RATE
+        if args.anneal_lr:
+            frac = 1.0 - (iteration / args.num_iterations)
+            lr_now = frac * args.learning_rate
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_now
 
-        for step in range(NUM_STEPS):
+        for step in range(args.num_steps):
             with torch.no_grad():
                 action, log_prob, _, value = actor_critic.get_action_and_value(state)
 
@@ -286,9 +220,6 @@ def main():
 
             state = torch.FloatTensor(next_state).unsqueeze(0).to(device)
             episode_rewards.append(reward)
-
-            # plotting significantly reduces speed
-            # plot_reward_real_time(episode_rewards, show_result=True)
 
             if done:
                 state, _ = env.reset()
@@ -301,9 +232,9 @@ def main():
         advantages = []
         values = memory.values + [actor_critic.get_action_and_value(state)[3].item()]
         gae = 0
-        for step in reversed(range(NUM_STEPS)):
-            delta = memory.rewards[step] + GAMMA * values[step + 1] - values[step]
-            gae = delta + GAMMA * GAE_LAMBDA * gae
+        for step in reversed(range(args.num_steps)):
+            delta = memory.rewards[step] + args.gamma * values[step + 1] - values[step]
+            gae = delta + args.gamma * args.gae_lambda * gae
             advantages.insert(0, gae)
             returns.insert(0, gae + values[step])
 
@@ -319,60 +250,43 @@ def main():
         advantages = torch.FloatTensor(advantages).to(device)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        for _ in range(PPO_EPOCHS):
+        for _ in range(args.update_epochs):
             for batch in batches:
                 _, new_log_probs, entropy, new_values = actor_critic.get_action_and_value(states[batch], actions[batch])
                 log_ratio = new_log_probs - old_log_probs[batch]
-                ratio = (new_log_probs - old_log_probs[batch]).exp()
+                ratio = log_ratio.exp()
 
                 # Policy loss
                 pg_loss1 = -advantages[batch] * ratio
-                pg_loss2 = -advantages[batch] * torch.clamp(ratio, 1 - CLIP_EPSILON, 1 + CLIP_EPSILON)
+                pg_loss2 = -advantages[batch] * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 # Value loss
-                # value_loss = F.mse_loss(new_values.squeeze(), returns[batch])
-                if CLIP_VLOSS:
-                    # Convert memory.values to a tensor if it's not already
-                    memory_values = torch.FloatTensor(memory.values).to(device)
-
-                    # Clipped value prediction
-                    value_pred_clipped = memory_values[batch] + torch.clamp(
-                        new_values - memory_values[batch], -CLIP_EPSILON, CLIP_EPSILON
-                    )
-
-                    # Calculate both clipped and unclipped value losses
-                    value_loss_clipped = (value_pred_clipped - returns[batch]) ** 2
-                    value_loss_unclipped = (new_values - returns[batch]) ** 2
-
-                    # Take the maximum of the two losses (as per PPO clipping)
-                    value_loss = 0.5 * torch.max(value_loss_clipped, value_loss_unclipped).mean()
+                if args.clip_vloss:
+                    value_loss_clipped = (returns[batch] - new_values).pow(2)
+                    value_loss_unclipped = (returns[batch] - returns[batch]).pow(2)
+                    value_loss = torch.max(value_loss_clipped, value_loss_unclipped).mean()
                 else:
-                    value_loss = 0.5 * F.mse_loss(new_values, returns[batch])
-                
-                # Compute KL divergence
-                approx_kl = (log_ratio - (ratio - 1)).mean()
-                kl_values.append(approx_kl.item())
+                    value_loss = (returns[batch] - new_values).pow(2).mean()
 
-                # Total loss
-                loss = pg_loss - ENT_COEF * entropy.mean() + VF_COEF * value_loss #+ KL_COEF * approx_kl
-
+                loss = pg_loss - args.ent_coef * entropy.mean() + args.vf_coef * value_loss
                 optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(actor_critic.parameters(), MAX_GRAD_NORM)
+                nn.utils.clip_grad_norm_(actor_critic.parameters(), args.max_grad_norm)
                 optimizer.step()
 
-                # KL here is not penalty, but rather break out directly for too big of a change
-                if TARGET_KL is not None and approx_kl > TARGET_KL:
-                    print(f"Early stopping at iteration {iteration + 1} due to reaching target KL.")
-                    break
+        # Log KL divergence and plot it
+        with torch.no_grad():
+            approx_kl = ((log_ratio - (ratio - 1)).mean()).item()
+            kl_values.append(approx_kl)
+        # plot_kl(kl_values)
 
         memory.clear_memory()
 
         if iteration % 10 == 0:
-            print(f'Iteration {iteration * BATCH_SIZE}')
+            print(f'Iteration {iteration * args.batch_size}')
 
-        if iteration >= ITERATIONS:  # Adjust this number based on desired training duration
+        if iteration >= args.num_iterations:
             break
 
     print("Training complete")
@@ -380,19 +294,18 @@ def main():
     plot_kl(kl_values, show_result=True)
 
     # Save the model
-    save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+    save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    import re
-    existing_files = os.listdir(save_dir)
-    run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
-    run_number = max(run_numbers) + 1 if run_numbers else 1
-
-    data_filename = f"ppo_ITER_{ITERATIONS}_KL_{TARGET_KL}_RUN_{run_number}.pth"
+    data_filename = f"ppo_{args.env_id}_run.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
     torch.save(actor_critic.state_dict(), data_path)
+
+    # Ensure all plots stay visible after training
+    plt.ioff()
+    plt.show()
 
 if __name__ == "__main__":
     main()

@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
 import numpy as np
+import os
+import argparse
 
 import torch
 import torch.nn as nn
@@ -24,7 +26,7 @@ if is_ipython:
 plt.ion()
 
 # Hyperparameters
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 2e-4
 NUM_ENVS = 1
 NUM_STEPS = 2048
 GAMMA = 0.99
@@ -33,15 +35,17 @@ PPO_EPOCHS = 10
 CLIP_EPSILON = 0.2
 ENT_COEF = 0.0
 VF_COEF = 0.5
-UPN_COEF = 0.1  # New hyperparameter for UPN loss
+UPN_COEF = 0.5  # New hyperparameter for UPN loss
 MAX_GRAD_NORM = 0.5
 BATCH_SIZE = NUM_STEPS * NUM_ENVS
 MINIBATCH_SIZE = BATCH_SIZE // 32
-ITERATIONS = 1000
+ITERATIONS = 300
 
 ANNEAL_LR = True
 CLIP_VLOSS = True
 TARGET_KL = 0.01
+KL_COEF = 0.1
+UPN_MIX_COEF = 0.8 # higher means more ppo action
 
 register(
     id="Pendulum-v1",
@@ -89,6 +93,9 @@ class PPOMemory:
         self.next_states = []
 
 class UPN(nn.Module):
+    '''Design Load in for just fmppo's upn for continually building representations,
+    do sequential changes in gravity or task goals (including changing back gravity) to see performance'''
+
     def __init__(self, state_dim, action_dim, latent_dim):
         super(UPN, self).__init__()
         self.encoder = nn.Sequential(
@@ -120,8 +127,11 @@ class UPN(nn.Module):
         Called by compute_upn_loss as upn.
 
         Let the forward model here learn the dynamics from imitation data and one line optimize from gradient
-        '''
 
+        Also need to have new experiences in it so it can continually learn new skills
+        
+        state here is one sampled state already
+        '''
         z = self.encoder(state)
         z_next = self.encoder(next_state)
         z_pred = self.dynamics(torch.cat([z, action], dim=-1))
@@ -131,6 +141,7 @@ class UPN(nn.Module):
         return z, z_next, z_pred, action_pred, state_recon, next_state_pred
 
 class ActorCriticUPN(nn.Module):
+    '''connected to UPN as well'''
     def __init__(self, n_states, n_actions, latent_dim=32):
         super(ActorCriticUPN, self).__init__()
         self.upn = UPN(n_states, n_actions, latent_dim)
@@ -158,7 +169,11 @@ class ActorCriticUPN(nn.Module):
         return action_mean, action_std, value
 
     def get_action_and_value(self, state, action=None):
-        '''Main contribution of UPN, action envisioned added to selection phase'''
+        '''Main contribution of UPN, action envisioned added to selection phase,
+        the data passed in here should be all state data for performing ppo update.
+        
+        Using this action directly converges, though not the best action
+        '''
 
         z = self.upn.encoder(state)
         action_mean, action_std, value = self(state) # action from actor network
@@ -171,10 +186,51 @@ class ActorCriticUPN(nn.Module):
         if action is None:
             action = probs.sample()
 
-        # Combine actions from PPO policy and UPN's inverse dynamics model
-        combined_action = 0.5 * action + 0.5 * action_pred  # Weight the actions 0.5 for now, do Kalman filter thing later
+        # # Combine actions from PPO policy and UPN's inverse dynamics model
+        # # Weight the actions 0.5 for now, do Kalman filter thing later, AlphaGo
+        combined_action = UPN_MIX_COEF * action + (1 - UPN_MIX_COEF) * action_pred
 
         return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), value
+    
+    def load_upn(self, file_path):
+        '''Load only the UPN model parameters from the specified file path,
+        Usage for transfering previously elarned experiences to this new one.'''
+
+        if os.path.exists(file_path):
+            print(f"Loading UPN parameters from {file_path}")
+            self.upn.load_state_dict(torch.load(file_path))
+        else:
+            print(f"No existing UPN model found at {file_path}, starting with new parameters.")
+
+def mixed_batch(ppo_states, ppo_actions, ppo_next_states, data_path='mvp/data/pendulum_ppo_imitation_run_4.npz'):
+    '''Computing mixed next state for ONLY upn data input, loss, and optimization'''
+
+    data = np.load(data_path)
+    states = data['states']
+    actions = data['actions']
+    next_states = data['next_states']
+    # rand = np.random.randint(len(states))
+    # state, action, next_state = states[rand], actions[rand], next_states[rand]
+
+    imitation_states = torch.FloatTensor(states).to(device)
+    imitation_actions = torch.FloatTensor(actions).to(device)
+    imitation_next_states = torch.FloatTensor(next_states).to(device)
+
+    mixed_states = torch.cat([imitation_states, ppo_states], dim=0)
+    mixed_actions = torch.cat([imitation_actions, ppo_actions], dim=0)
+    mixed_next_states = torch.cat([imitation_next_states, ppo_next_states], dim=0)
+
+    # Shuffle the mixed data
+    num_samples = mixed_states.shape[0]
+    indices = torch.randperm(num_samples)  # Generate random permutation of indices
+
+    # Apply the random permutation to shuffle the mixed data
+    mixed_states = mixed_states[indices]
+    mixed_actions = mixed_actions[indices]
+    mixed_next_states = mixed_next_states[indices]
+
+    return mixed_states, mixed_actions, mixed_next_states
+
 
 def compute_upn_loss(upn, state, action, next_state):
     '''Main contribution of UPN, forward envisioning process contributing to the loss'''
@@ -194,7 +250,7 @@ def compute_upn_loss(upn, state, action, next_state):
     upn_loss = recon_loss + forward_loss + inverse_loss
     return upn_loss
 
-def plot_reward(episode_rewards, show_result=False):
+def plot_reward(episode_rewards, show_result=False, avg_interval=20*BATCH_SIZE):
     plt.figure(1)
     reward_episode = torch.tensor(episode_rewards, dtype=torch.float)
     if show_result:
@@ -205,7 +261,7 @@ def plot_reward(episode_rewards, show_result=False):
     plt.xlabel("Episode")
     plt.ylabel("Rewards")
     plt.plot(reward_episode.numpy())
-    if len(reward_episode) >= 100:
+    if len(reward_episode) >= avg_interval:
         means = reward_episode.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
@@ -218,12 +274,59 @@ def plot_reward(episode_rewards, show_result=False):
         else:
             display.display(plt.gcf())
 
-def main():
+def plot_reward_real_time(episode_rewards, show_result=False, avg_interval=20*BATCH_SIZE):
+    """Plot the reward achieved"""
+
+    plt.figure(1)
+    reward_episode = torch.tensor(episode_rewards, dtype=torch.float)
+    if show_result:
+        plt.title("Result")
+    else:
+        plt.clf()
+        plt.title("Training...")
+    plt.xlabel("Episode")
+    plt.ylabel("rwards")
+    # plt.plot(reward_episode.numpy())
+    # Take 100 episode averages and plot them too
+    if len(reward_episode) >= avg_interval:
+        means = reward_episode.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+
+    plt.pause(0.001)  # pause a bit so that plots are updated
+    if is_ipython:
+        if not show_result:
+            display.display(plt.gcf())
+            display.clear_output(wait=True)
+        else:
+            display.display(plt.gcf())
+
+def get_args():
+    '''For args parsing'''
+    parser = argparse.ArgumentParser(description="Train a PPO agent with UPN")
+
+    # Argument to specify the path to load/save UPN parameters
+    parser.add_argument('--load-upn', type=str, default=None,
+                        help='Path to load UPN model parameters (default: None)')
+    args = parser.parse_args()
+    return args
+
+def main(args):
     env = gym.make("Pendulum-v1")
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
 
     actor_critic = ActorCriticUPN(n_states, n_actions).to(device)
+
+    if args.load_upn is not None:
+        # Define the path to save and load UPN weights
+        model_dir = os.path.join(os.getcwd(), 'mvp', 'params')
+        os.makedirs(model_dir, exist_ok=True)
+        load_path = os.path.join(model_dir, args.load_upn)
+
+        # Attempt to load UPN weights
+        actor_critic.load_upn(load_path)
+
     optimizer = optim.Adam(actor_critic.parameters(), lr=LEARNING_RATE)
 
     memory = PPOMemory(BATCH_SIZE)
@@ -279,6 +382,9 @@ def main():
         advantages = torch.FloatTensor(advantages).to(device)
         next_states = torch.FloatTensor(next_states).to(device)
 
+        # mixes batch for ONLY upn update purpose
+        mixed_states, mixed_actions, mixed_next_states = mixed_batch(states, actions, next_states)
+
         for _ in range(PPO_EPOCHS):
             for batch in batches:
                 _, new_log_probs, entropy, new_values = actor_critic.get_action_and_value(states[batch], actions[batch])
@@ -301,22 +407,25 @@ def main():
                     value_loss = 0.5 * torch.max(value_loss_clipped, value_loss_unclipped).mean()
                 else:
                     value_loss = 0.5 * F.mse_loss(new_values, returns[batch])
+                
+                # Compute KL divergence
+                approx_kl = (log_ratio - (ratio - 1)).mean()
 
                 # UPN loss
-                upn_loss = compute_upn_loss(actor_critic.upn, states[batch], actions[batch], next_states[batch])
+                upn_loss = compute_upn_loss(actor_critic.upn, mixed_states[batch], mixed_actions[batch], mixed_next_states[batch])
 
                 # Total loss
-                loss = pg_loss - ENT_COEF * entropy.mean() + VF_COEF * value_loss + UPN_COEF * upn_loss
+                loss = pg_loss - ENT_COEF * entropy.mean() + VF_COEF * value_loss + UPN_COEF * upn_loss + KL_COEF * approx_kl
 
                 optimizer.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(actor_critic.parameters(), MAX_GRAD_NORM)
                 optimizer.step()
 
-                approx_kl = (ratio - 1.0 - log_ratio).mean()
-                if TARGET_KL is not None and approx_kl > TARGET_KL:
-                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
-                    break
+                # approx_kl = (ratio - 1.0 - log_ratio).mean()
+                # if TARGET_KL is not None and approx_kl > TARGET_KL:
+                #     print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                #     break
 
         memory.clear_memory()
 
@@ -332,18 +441,27 @@ def main():
     plt.show()
 
     # Save the model
-    torch.save(actor_critic.state_dict(), f"mvp/params/pendulum_fmppo_{ITERATIONS}_KL_{TARGET_KL}.pth")
+    save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+    os.makedirs(save_dir, exist_ok=True)
 
-    # video_env = RecordVideo(env, video_folder="./videos", episode_trigger=lambda x: True)
-    # state, _ = video_env.reset()
-    # state = torch.FloatTensor(state).unsqueeze(0).to(device)
-    # done = False
-    # while not done:
-    #     with torch.no_grad():
-    #         action, _, _, _ = actor_critic.get_action_and_value(state)
-    #     state, _, done, _, _ = video_env.step(action.cpu().numpy()[0])
-    #     state = torch.FloatTensor(state).unsqueeze(0).to(device)
-    # video_env.close()
+    import re
+    existing_files = os.listdir(save_dir)
+    run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
+    run_number = max(run_numbers) + 1 if run_numbers else 1
+
+    data_filename = f"fmppo_ITER_{ITERATIONS}_KL_{TARGET_KL}_RUN_{run_number}.pth"
+    data_path = os.path.join(save_dir, data_filename)
+
+    data_filename = f"fm_ITER_{ITERATIONS}_KL_{TARGET_KL}_RUN_{run_number}.pth"
+    data2_path = os.path.join(save_dir, data_filename)
+
+    print('Saved at: ', data_path)
+    torch.save(actor_critic.state_dict(), data_path)
+
+    print('Saved at: ', data2_path)
+    torch.save(actor_critic.upn.state_dict(), data2_path)
 
 if __name__ == "__main__":
-    main()
+    # python mvp/fmppo_continuous.py --load-upn [directly give file name]
+    args = get_args()
+    main(args)
