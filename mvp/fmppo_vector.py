@@ -38,11 +38,11 @@ class Args:
     ent_coef: float = 0.0
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-    upn_coef: float = 0.5 # planning helps
-    upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
+    upn_coef: float = 0.8
     load_upn: str = "fm_vector.pth"
     mix_coord: bool = True
 
+    # upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
     # kl_coef: float = 0.1
     # target_kl: float = None
 
@@ -107,6 +107,7 @@ class UPN(nn.Module):
         state_recon = self.decoder(z)
         next_state_pred = self.decoder(z_pred)
         return z, z_next, z_pred, action_pred, state_recon, next_state_pred
+    
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
@@ -143,41 +144,19 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         
         uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
-        uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
+        uncertainty = torch.clamp(uncertainty, 0, 1)  # If uncertainty is low, rely more on mean action; if high, rely on predicetd action.
 
-        z_next = self.upn.encoder(x)
-        action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))
+        # z_next = self.upn.encoder(x)
+        # action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))
 
         if action is None:
             action = probs.sample()
+        
+        # Linearly interpolate between the mean action and the predicted action, lower uncertainty, more mean action
+        # combined_action = uncertainty * action + (1 - uncertainty) * action_pred
+        # combined_action = args.upn_mix_coef * action + (1 - args.upn_mix_coef) * action_pred
 
-        combined_action = args.upn_mix_coef * action + (1 - args.upn_mix_coef) * action_pred
-        return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
-    
-    # def get_action_and_value(self, x, action=None):
-    #     z = self.upn.encoder(x)
-    #     action_mean = self.actor_mean(z)
-    #     action_logstd = self.actor_logstd.expand_as(action_mean)
-    #     action_std = torch.exp(action_logstd)
-    #     probs = Normal(action_mean, action_std)
-
-    #     # Action prediction from the UPN inverse dynamics
-    #     z_next = self.upn.encoder(x)
-    #     action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))
-
-    #     if action is None:
-    #         action = probs.sample()
-
-    #     # Use the standard deviation as a proxy for uncertainty.
-    #     uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
-
-    #     # If uncertainty is low, rely more on mean action; if high, rely on predicetd action.
-    #     uncertainty_weight = torch.clamp(uncertainty, 0, 1)  # Ensure it's between 0 and 1
-
-    #     # Linearly interpolate between the mean action and the predicted action, lower uncertainty, more mean action
-    #     combined_action = uncertainty_weight * action + (1 - uncertainty_weight) * action_pred
-
-    #     return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
 
     
     def load_upn(self, file_path):
@@ -372,7 +351,7 @@ if __name__ == "__main__":
         # imitate mix
         b_obs_imitate = obs_imitate.reshape((-1,) + envs.single_observation_space.shape)
         b_actions_imitate = actions_imitate.reshape((-1,) + envs.single_action_space.shape)
-        b_next_obs_imitate = obs_imitate.reshape((-1,) + envs.single_observation_space.shape) # some how giving the same obs helps?
+        b_next_obs_imitate = next_obs_imitate.reshape((-1,) + envs.single_observation_space.shape) # previous error of passing the same obs help may be due to having 2 obs in action selection
 
         b_inds = np.arange(args.batch_size)
         clipfracs_batch = []
@@ -447,7 +426,7 @@ if __name__ == "__main__":
     envs.close()
 
     # Plotting results
-    plt.figure(figsize=(30, 10))
+    plt.figure(figsize=(20, 10))
 
     plt.subplot(2, 3, 1)
     plt.plot(metrics["episodic_returns"])
@@ -486,12 +465,6 @@ if __name__ == "__main__":
     plt.title('Explained Variance')
     plt.xlabel('Iteration')
     plt.ylabel('Variance')
-
-    # plt.subplot(3, 3, 7)
-    # plt.plot(metrics["uncertainty"])
-    # plt.title('Uncertainty')
-    # plt.xlabel('Iteration')
-    # plt.ylabel('Uncertainty')
 
     plt.tight_layout()
     plt.savefig('fmppo_results.png')

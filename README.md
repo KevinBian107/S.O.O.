@@ -3,9 +3,9 @@ Does UNP Belief network serve as a forward model, similar to the Cerebellum func
 ## FMPPO Control Examples
 
 ### Retrained PPO & Fm-PPO Agents on Half-Cheetah Task
-![Alt text](demos/vectorized_half_cheetah/fmppo_results.png)
+![Alt text](demos/vectorized_half_cheetah/fmppo_double_trained.png)
 
-![Alt text](demos/vectorized_half_cheetah/ppo_results_twice_trained.png)
+![Alt text](demos/vectorized_half_cheetah/ppo_double_trained.png)
 
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">
