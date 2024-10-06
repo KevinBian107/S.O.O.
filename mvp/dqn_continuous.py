@@ -16,8 +16,7 @@ from gym.envs.registration import register
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# from mvp.dqn_networks import ReplayMemory, DQN, Transition
-from mvp.env_pendulum import PendulumEnv
+from mvp.envs.env_pendulum import PendulumEnv
 
 is_ipython = "inline" in matplotlib.get_backend()
 if is_ipython:
