@@ -17,9 +17,9 @@ from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVid
 
 @dataclass
 class Args:
-    exp_name: str = "fmppo_inverted_pendulum"
-    env_id: str = "InvertedPendulum-v4"
-    total_timesteps: int = 100000
+    exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
+    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
+    total_timesteps: int = 200000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -41,6 +41,7 @@ class Args:
     upn_coef: float = 0.5 # planning helps
     upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
     load_upn: str = "fm_vector.pth"
+    mix_coord: bool = True
 
     # kl_coef: float = 0.1
     # target_kl: float = None
@@ -140,6 +141,9 @@ class Agent(nn.Module):
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
+        
+        uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
+        uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
 
         z_next = self.upn.encoder(x)
         action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))
@@ -148,7 +152,33 @@ class Agent(nn.Module):
             action = probs.sample()
 
         combined_action = args.upn_mix_coef * action + (1 - args.upn_mix_coef) * action_pred
-        return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
+        return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
+    
+    # def get_action_and_value(self, x, action=None):
+    #     z = self.upn.encoder(x)
+    #     action_mean = self.actor_mean(z)
+    #     action_logstd = self.actor_logstd.expand_as(action_mean)
+    #     action_std = torch.exp(action_logstd)
+    #     probs = Normal(action_mean, action_std)
+
+    #     # Action prediction from the UPN inverse dynamics
+    #     z_next = self.upn.encoder(x)
+    #     action_pred = self.upn.inverse_dynamics(torch.cat([z, z_next], dim=-1))
+
+    #     if action is None:
+    #         action = probs.sample()
+
+    #     # Use the standard deviation as a proxy for uncertainty.
+    #     uncertainty = action_std.mean(dim=-1)  # Averaging over action dimensions
+
+    #     # If uncertainty is low, rely more on mean action; if high, rely on predicetd action.
+    #     uncertainty_weight = torch.clamp(uncertainty, 0, 1)  # Ensure it's between 0 and 1
+
+    #     # Linearly interpolate between the mean action and the predicted action, lower uncertainty, more mean action
+    #     combined_action = uncertainty_weight * action + (1 - uncertainty_weight) * action_pred
+
+    #     return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
+
     
     def load_upn(self, file_path):
         '''Load only the UPN model parameters from the specified file path,
@@ -168,42 +198,35 @@ def compute_upn_loss(upn, state, action, next_state):
     upn_loss = recon_loss + forward_loss + inverse_loss
     return upn_loss
 
-def mixed_batch(ppo_states, ppo_actions, ppo_next_states, data_path='mvp/data/imitation_data.npz'):
+def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah.npz'):
+    '''3D: sample_size, env_dim, Dof_dim, no sample, concatination direclty'''
+
     # Load imitation data
-    data = np.load(data_path)
-    states = data['states']
-    actions = data['actions']
-    next_states = data['next_states']
+    imitation_data = np.load(imitation_data_path)
+    imitation_states = torch.FloatTensor(imitation_data['states']).to(device)
+    imitation_actions = torch.FloatTensor(imitation_data['actions']).to(device)
+    imitation_next_states = torch.FloatTensor(imitation_data['next_states']).to(device)
 
-    # Convert imitation data to tensors
-    imitation_states = torch.FloatTensor(states).to(device)
-    imitation_actions = torch.FloatTensor(actions).to(device)
-    imitation_next_states = torch.FloatTensor(next_states).to(device)
+    print(f'Mixing Imitation Data of Size: {imitation_states.shape[0]}')
 
-    # Reshape imitation data similar to PPO data
-    imitation_states = imitation_states.reshape((-1,) + envs.single_observation_space.shape)
-    imitation_actions = imitation_actions.reshape((-1,) + envs.single_action_space.shape)
-    imitation_next_states = imitation_next_states.reshape((-1,) + envs.single_observation_space.shape)
+    # Ensure imitation data has the same 3D shape as PPO data
+    if imitation_states.dim() == 2:
+        imitation_states = imitation_states.unsqueeze(1)
+        imitation_actions = imitation_actions.unsqueeze(1)
+        imitation_next_states = imitation_next_states.unsqueeze(1)
 
-    # Print tensor shapes for debugging
-    # print(f"Shape of PPO states: {ppo_states.shape}")
-    # print(f"Shape of Imitation states (after reshaping): {imitation_states.shape}")
-    # print(f"Shape of PPO actions: {ppo_actions.shape}")
-    # print(f"Shape of Imitation actions: {imitation_actions.shape}")
+    # Combine PPO and imitation data
+    mixed_states = torch.cat([ppo_states, imitation_states], dim=0)
+    mixed_actions = torch.cat([ppo_actions, imitation_actions], dim=0)
+    mixed_next_states = torch.cat([ppo_next_states, imitation_next_states], dim=0)
 
-    # Concatenate PPO and imitation data along the batch dimension (dim=0)
-    mixed_states = torch.cat([imitation_states, ppo_states], dim=0)
-    mixed_actions = torch.cat([imitation_actions, ppo_actions], dim=0)
-    mixed_next_states = torch.cat([imitation_next_states, ppo_next_states], dim=0)
+    # Shuffle the combined data
+    shuffle_indices = torch.randperm(mixed_states.shape[0])
+    mixed_states = mixed_states[shuffle_indices]
+    mixed_actions = mixed_actions[shuffle_indices]
+    mixed_next_states = mixed_next_states[shuffle_indices]
 
-    # Shuffle the mixed batch
-    num_samples = mixed_states.shape[0]
-    indices = torch.randperm(num_samples)
-
-    # Shuffle the concatenated data
-    mixed_states = mixed_states[indices]
-    mixed_actions = mixed_actions[indices]
-    mixed_next_states = mixed_next_states[indices]
+    print(f'Total Mixed Imitation Data of Size: {mixed_states.shape[0]}')
 
     return mixed_states, mixed_actions, mixed_next_states
 
@@ -260,6 +283,8 @@ if __name__ == "__main__":
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    # this is only for upn
+    next_obs_all = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
 
     # Logging setup
     global_step = 0
@@ -274,7 +299,8 @@ if __name__ == "__main__":
         "approx_kls": [],
         "clipfracs": [],
         "explained_variances": [],
-        "upn_losses": []
+        "upn_losses": [],
+        "uncertainty":[]
     }
 
     next_obs, _ = envs.reset(seed=args.seed)
@@ -295,7 +321,7 @@ if __name__ == "__main__":
             dones[step] = next_done
 
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value, _ = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -304,6 +330,7 @@ if __name__ == "__main__":
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+            next_obs_all[step] = next_obs
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
@@ -326,6 +353,13 @@ if __name__ == "__main__":
                 delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
+        
+        if args.mix_coord:
+            # mixing screw things up, isolate the problem bit by bit
+            obs_imitate, actions_imitate, next_obs_imitate = mixed_batch(obs, actions, next_obs_all)
+        else:
+            obs_imitate, actions_imitate, next_obs_imitate = obs, actions, next_obs_all
+
 
         # Mixed batch with imitation data
         b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
@@ -335,8 +369,10 @@ if __name__ == "__main__":
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
 
-        # mixing screw things up, isolate the problem bit by bit
-        # b_obs, b_actions, b_next_states = mixed_batch(b_obs, b_actions, b_obs)
+        # imitate mix
+        b_obs_imitate = obs_imitate.reshape((-1,) + envs.single_observation_space.shape)
+        b_actions_imitate = actions_imitate.reshape((-1,) + envs.single_action_space.shape)
+        b_next_obs_imitate = obs_imitate.reshape((-1,) + envs.single_observation_space.shape) # some how giving the same obs helps?
 
         b_inds = np.arange(args.batch_size)
         clipfracs_batch = []
@@ -346,7 +382,7 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue, uncertainty = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -379,7 +415,10 @@ if __name__ == "__main__":
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                upn_loss = compute_upn_loss(agent.upn, b_obs[mb_inds], b_actions[mb_inds], b_obs[mb_inds])
+                uncertainty = uncertainty.mean()
+
+                # previously pass in obs twice, solidifies state
+                upn_loss = compute_upn_loss(agent.upn, b_obs_imitate[mb_inds], b_actions_imitate[mb_inds], b_next_obs_imitate[mb_inds])
 
                 loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef
 
@@ -399,6 +438,8 @@ if __name__ == "__main__":
         metrics["approx_kls"].append(approx_kl.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
+        metrics["uncertainty"].append(uncertainty.item())
+
 
         sps = int(global_step / (time.time() - start_time))
         print(f"SPS: {sps}")
@@ -406,27 +447,27 @@ if __name__ == "__main__":
     envs.close()
 
     # Plotting results
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=(30, 10))
 
-    plt.subplot(2, 3, 1)
+    plt.subplot(3, 3, 1)
     plt.plot(metrics["episodic_returns"])
     plt.title('Episodic Returns')
     plt.xlabel('Episode')
     plt.ylabel('Return')
 
-    plt.subplot(2, 3, 2)
+    plt.subplot(3, 3, 2)
     plt.plot(metrics["episodic_lengths"])
     plt.title('Episodic Lengths')
     plt.xlabel('Episode')
     plt.ylabel('Length')
 
-    plt.subplot(2, 3, 3)
+    plt.subplot(3, 3, 3)
     plt.plot(metrics["learning_rates"])
     plt.title('Learning Rate')
     plt.xlabel('Iteration')
     plt.ylabel('LR')
 
-    plt.subplot(2, 3, 4)
+    plt.subplot(3, 3, 4)
     plt.plot(metrics["value_losses"], label='Value Loss')
     plt.plot(metrics["policy_losses"], label='Policy Loss')
     plt.title('Losses')
@@ -434,17 +475,23 @@ if __name__ == "__main__":
     plt.ylabel('Loss')
     plt.legend()
 
-    plt.subplot(2, 3, 5)
+    plt.subplot(3, 3, 5)
     plt.plot(metrics["entropies"])
     plt.title('Entropy')
     plt.xlabel('Iteration')
     plt.ylabel('Entropy')
 
-    plt.subplot(2, 3, 6)
+    plt.subplot(3, 3, 6)
     plt.plot(metrics["explained_variances"])
     plt.title('Explained Variance')
     plt.xlabel('Iteration')
     plt.ylabel('Variance')
+
+    plt.subplot(3, 3, 7)
+    plt.plot(metrics["uncertainty"])
+    plt.title('Uncertainty')
+    plt.xlabel('Iteration')
+    plt.ylabel('Uncertainty')
 
     plt.tight_layout()
     plt.savefig('fmppo_results.png')

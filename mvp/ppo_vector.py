@@ -15,13 +15,13 @@ from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVid
 
 @dataclass
 class Args:
-    exp_name: str = "ppo_inverted_pendulum"
+    exp_name: str = "ppo_halfcheetah" #"ppo_inverted_pendulum"
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    env_id: str = "InvertedPendulum-v4"
+    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 100000
+    total_timesteps: int = 200000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -37,6 +37,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     target_kl: float = None
+    load_model: str = 'ppo_vector.pth'
     
     # to be filled in runtime
     batch_size: int = 0
@@ -117,6 +118,14 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
+
+    if args.load_model is not None:
+        if os.path.exists(args.load_model):
+            print(f"Loading model from {args.load_model}")
+            agent.load_state_dict(torch.load(args.load_model, map_location=device))
+        else:
+            print(f"Model file not found at {args.load_model}. Starting training from scratch.")
+
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -334,7 +343,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector.pth"
+    data_filename = f"ppo_vector_2.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
