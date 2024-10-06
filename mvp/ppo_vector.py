@@ -21,7 +21,7 @@ class Args:
     cuda: bool = True
     env_id: str = "InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 200000
+    total_timesteps: int = 100000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -309,14 +309,20 @@ if __name__ == "__main__":
     plt.xlabel('Iteration')
     plt.ylabel('Entropy')
 
+    # plt.subplot(2, 3, 6)
+    # plt.plot(sps_history)
+    # plt.title('Steps Per Second')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('SPS')
+
     plt.subplot(2, 3, 6)
-    plt.plot(sps_history)
-    plt.title('Steps Per Second')
+    plt.plot(explained_variances)
+    plt.title('Explained Variance')
     plt.xlabel('Iteration')
-    plt.ylabel('SPS')
+    plt.ylabel('Variance')
 
     plt.tight_layout()
-    plt.savefig('ppo_inverted_pendulum_results.png')
+    plt.savefig('ppo_results.png')
     plt.show()
 
     # Save the model

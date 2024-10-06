@@ -19,7 +19,7 @@ from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVid
 class Args:
     exp_name: str = "fmppo_inverted_pendulum"
     env_id: str = "InvertedPendulum-v4"
-    total_timesteps: int = 200000
+    total_timesteps: int = 100000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -38,10 +38,12 @@ class Args:
     ent_coef: float = 0.0
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-    upn_coef: float = 0.1
-    upn_mix_coef: float = 0.9 # higher = more ppo action
-    kl_coef: float = 0.1
-    target_kl: float = None
+    upn_coef: float = 0.5 # planning helps
+    upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
+    load_upn: str = "fm_vector.pth"
+
+    # kl_coef: float = 0.1
+    # target_kl: float = None
 
     # to be set at runtime
     batch_size: int = 0 
@@ -67,6 +69,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
     return thunk
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    '''Only on Actor Critic'''
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
@@ -103,7 +106,6 @@ class UPN(nn.Module):
         state_recon = self.decoder(z)
         next_state_pred = self.decoder(z_pred)
         return z, z_next, z_pred, action_pred, state_recon, next_state_pred
-
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
@@ -147,6 +149,16 @@ class Agent(nn.Module):
 
         combined_action = args.upn_mix_coef * action + (1 - args.upn_mix_coef) * action_pred
         return combined_action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
+    
+    def load_upn(self, file_path):
+        '''Load only the UPN model parameters from the specified file path,
+        Usage for transfering previously elarned experiences to this new one.'''
+
+        if os.path.exists(file_path):
+            print(f"Loading UPN parameters from {file_path}")
+            self.upn.load_state_dict(torch.load(file_path))
+        else:
+            print(f"No existing UPN model found at {file_path}, starting with new parameters.")
 
 def compute_upn_loss(upn, state, action, next_state):
     z, z_next, z_pred, action_pred, state_recon, next_state_pred = upn(state, action, next_state)
@@ -228,6 +240,17 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
+
+    if args.load_upn is not None:
+        # Define the path to save and load UPN weights
+        print('loaded params for forward model')
+        model_dir = os.path.join(os.getcwd(), 'mvp', 'params')
+        os.makedirs(model_dir, exist_ok=True)
+        load_path = os.path.join(model_dir, args.load_upn)
+
+        # Attempt to load UPN weights
+        agent.load_upn(load_path)
+
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -434,5 +457,11 @@ if __name__ == "__main__":
     data_filename = f"fmppo_vector.pth"
     data_path = os.path.join(save_dir, data_filename)
 
+    data_filename = f"fm_vector.pth"
+    data2_path = os.path.join(save_dir, data_filename)
+
     print('Saved at: ', data_path)
     torch.save(agent.state_dict(), data_path)
+
+    print('Saved at: ', data2_path)
+    torch.save(agent.upn.state_dict(), data2_path)
