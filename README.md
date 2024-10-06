@@ -5,3 +5,6 @@ Does GDP/belief net serve as a forward model, similar to the Cerebellum function
   Your browser does not support the video tag.
 </video>
 
+![Alt text](fmppo_results_5.png)
+
+
