@@ -41,7 +41,11 @@ def reduce_dimensionality(latent_reps, method='pca', n_components=2):
     if method == 'pca':
         reducer = PCA(n_components=n_components)
     elif method == 'tsne':
-        reducer = TSNE(n_components=n_components, random_state=42)
+        reducer = TSNE(n_components=n_components, 
+                       perplexity=30, 
+                       n_iter=1000, 
+                       learning_rate=200, 
+                       random_state=42)
     else:
         raise ValueError("Method must be either 'pca' or 'tsne'")
     
