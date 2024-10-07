@@ -31,6 +31,10 @@ Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
 
 ![Alt text](demos/vectorized_half_cheetah/jump/fmppo_transfer.png)
 
+PPO and Fm-PPO Agent post-training evaluation on new random environment for jump task:
+
+![Alt text](demos/vectorized_half_cheetah/eval/eval_jump_rand_seed.png)
+
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
@@ -47,17 +51,3 @@ Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
             <blockquote>Deep-RL Half Cheetah agent trained using Fm-PPO</blockquote>
           </div>
         </div>
-
-### Overfitting
-
-Fm-PPO with Fm-Core transfered once on the same task:
-
-![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel1.png)
-
-Fm-PPO with Fm-Core transfered once on different task:
-
-![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel2.png)
-
-Fm-PPO with Fm-Core transfered twice on same task:
-
-![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel1_fmppo_transfer3.png)

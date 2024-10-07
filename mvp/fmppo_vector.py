@@ -41,7 +41,7 @@ class Args:
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
     load_upn: str = "fm_vector.pth"
-    mix_coord: bool = True # this helps greatly
+    mix_coord: bool = False # this helps greatly
 
     # upn_mix_coef: float = 0.9 # higher = more ppo action, action making should still be ppo
     # kl_coef: float = 0.1
@@ -159,7 +159,7 @@ class Agent(nn.Module):
         # combined_action = uncertainty * action + (1 - uncertainty) * action_pred
         # combined_action = args.upn_mix_coef * action + (1 - args.upn_mix_coef) * action_pred
 
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z), uncertainty
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
 
     
     def load_upn(self, file_path):
@@ -281,8 +281,7 @@ if __name__ == "__main__":
         "approx_kls": [],
         "clipfracs": [],
         "explained_variances": [],
-        "upn_losses": [],
-        "uncertainty":[]
+        "upn_losses": []
     }
 
     next_obs, _ = envs.reset(seed=args.seed)
@@ -303,7 +302,7 @@ if __name__ == "__main__":
             dones[step] = next_done
 
             with torch.no_grad():
-                action, logprob, _, value, _ = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -364,7 +363,7 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue, uncertainty = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -397,7 +396,6 @@ if __name__ == "__main__":
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                uncertainty = uncertainty.mean()
 
                 # previously pass in obs twice, solidifies state
                 upn_loss = compute_upn_loss(agent.upn, b_obs_imitate[mb_inds], b_actions_imitate[mb_inds], b_next_obs_imitate[mb_inds])
@@ -420,8 +418,6 @@ if __name__ == "__main__":
         metrics["approx_kls"].append(approx_kl.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
-        metrics["uncertainty"].append(uncertainty.item())
-
 
         sps = int(global_step / (time.time() - start_time))
         print(f"SPS: {sps}")
@@ -477,10 +473,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_jump.pth"
+    data_filename = f"fmppo_vector_jump2.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_jump.pth"
+    data_filename = f"fm_vector_jump2.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
