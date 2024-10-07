@@ -3,6 +3,7 @@ Does UNP Belief network serve as a forward model, similar to the Cerebellum func
 ## FMPPO Control Examples
 
 ### Retrained PPO & Fm-PPO Agents on Half-Cheetah Task
+All Fm-PPO should start tarining from scratch, with the goal to try to observe how the Fm-Core help the agent to get higher rewards.
 
 PPO trained on 2e5 global steps:
 
@@ -10,7 +11,13 @@ PPO trained on 2e5 global steps:
 
 Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
 
-![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer.png)
+Transfer Twice Core:
+
+![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_2.png)
+
+Transfer Three Times Core:
+
+![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_3.png)
 
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">

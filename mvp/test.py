@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from torch.distributions import Normal
 import torch.nn as nn
 from fmppo_vector import Args
-from mvp.env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
+from env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
     
 # UPN model definition
 class UPN(nn.Module):
@@ -136,13 +136,13 @@ if __name__ == "__main__":
     # Set up vectorized environment with a single instance
     env_id = "HalfCheetah-v4"
     # env = gym.vector.SyncVectorEnv([lambda: TargetVelocityWrapper(gym.make(env_id), target_velocity=1.0)])
-    # env = gym.vector.SyncVectorEnv([lambda: gym.make(env_id)])
-    env = gym.vector.SyncVectorEnv([lambda: JumpRewardWrapper(gym.make(env_id), jump_target_height=1.0)])
+    env = gym.vector.SyncVectorEnv([lambda: gym.make(env_id)])
+    # env = gym.vector.SyncVectorEnv([lambda: JumpRewardWrapper(gym.make(env_id), jump_target_height=1.0)])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the FM-PPO model
     fmppo_agent = FMPPOAgent(env).to(device)
-    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector.pth")
+    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_3.pth")
     fmppo_agent.load_state_dict(torch.load(fmppo_path, map_location=device))
 
     # Load the PPO model
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
-    episodde_num = 300
+    episodde_num = 200
     # Evaluate both models for 100 episodes
     fmppo_returns = evaluate_model(fmppo_agent, env, device, num_episodes=episodde_num)
     ppo_returns = evaluate_model(ppo_agent, env, device, num_episodes=episodde_num)
