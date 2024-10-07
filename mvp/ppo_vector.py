@@ -54,8 +54,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         else:
             env = gym.make(env_id)
         
-        # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        env = JumpRewardWrapper(env=env, jump_target_height=1.0)
+        env = TargetVelocityWrapper(env, target_velocity=2.0)
+        # env = JumpRewardWrapper(env=env, jump_target_height=1.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)

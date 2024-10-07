@@ -62,12 +62,12 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     fmppo_agent = FMPPOAgent(envs).to(device)
-    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_jump.pth")
+    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_vel2.pth")
     fmppo_agent.load_state_dict(torch.load(fmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_jump.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_vel2.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     episode_num = 100
