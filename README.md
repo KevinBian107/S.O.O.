@@ -35,3 +35,17 @@ Transfer Three Times Core:
             <blockquote>Deep-RL Half Cheetah agent trained using Fm-PPO</blockquote>
           </div>
         </div>
+
+### Overfitting
+
+Fm-PPO with Fm-Core transfered once on the same task:
+
+![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel1.png)
+
+Fm-PPO with Fm-Core transfered once on different task:
+
+![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel2.png)
+
+Fm-PPO with Fm-Core transfered twice on same task:
+
+![Alt text](demos/vectorized_half_cheetah/eval%20with%20original/eval_vel1_fmppo_transfer3.png)
