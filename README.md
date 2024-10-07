@@ -5,6 +5,7 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 - Objective 1: See if such biologically inspired strategy (for example, maybe using mechanistic insight, maybe using neuronal representation as inductive biases) improves performance;
 - Objective 2: See if the Forward Model would resemble functionality and behavior of the cerebellum (for example, showing gradual learning of new motor skills).
+  - Idealy using a more biological realistic model with more biological realistic task such as the rodent model in VNL.
 
 ### Current Progress:
 1. Fm-Core transfer significantly improves same task training and testing performance (by same task, it means that the pre-trained Fm-core and Fm-PPO is trained in the same nevironmental setup).
