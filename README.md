@@ -4,7 +4,7 @@
 Does establishing a Forward Model, similar to the Cerebellum's function, facilitate motor action execution by providing a motor plan derived from previous motor control experiences for additional guidance (compare to pure sensory feedback like in model-free RL)? Moreover, can this new motor learning process be incorporated into the GDP for future motor controls?
 
 - Objective 1: See if such biologically inspired strategy (for example, maybe using mechanistic insight, maybe using neuronal representation as inductive biases) improves performance;
-- Objecticve 2: See if the Forward Model would resemble functionality and behavior of the cerebellum (for example, showing gradual learning of new motor skills).
+- Objective 2: See if the Forward Model would resemble functionality and behavior of the cerebellum (for example, showing gradual learning of new motor skills).
 
 ### Current Progress:
 1. Fm-Core transfer significantly improves same task training and testing performance (by same task, it means that the pre-trained Fm-core and Fm-PPO is trained in the same nevironmental setup).
@@ -76,14 +76,14 @@ PPO and Fm-PPO Agent post-training evaluation on new random environment for 2x r
 
 ### Latent Representations
 
-PPO Latent Representation:
+PPO Latent Representation (Action distribution is latent), model action applied:
 
-![Alt text](demos/latent/latent_ppo_1.png)
+![Alt text](demos/latent/ppo_latent_1.png)
 
-FMPPO Latent Representation:
+FMPPO Latent Representation (Z in encder is latent), model action applied:
 
-![Alt text](demos/latent/latent_fmppo_1.png)
+![Alt text](demos/latent/fmppo_latent_1.png)
 
-Fm-Core Latent Representation:
+Fm-Core Latent Representation (Z in encder is latent), random action applied:
 
-![Alt text](demos/latent/latent_fm_1.png)
+![Alt text](demos/latent/fm_latent_1.png)

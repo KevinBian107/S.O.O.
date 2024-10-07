@@ -8,6 +8,7 @@ from sklearn.manifold import TSNE
 from ppo_vector import Args, Agent as PPOAgent, make_env
 
 def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
+    '''latent representations in ppo is the action directly, next action is random'''
     latent_reps = []
     actions = []
     observations = []
@@ -27,6 +28,7 @@ def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
                 latent_reps.append(action_mean.cpu().numpy().reshape(-1))  # Flatten latent representations
                 
                 action, _, _, _ = ppo_model.get_action_and_value(obs_tensor)
+                # action = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 action = action.cpu().numpy().squeeze()  # Remove the batch dimension
                 actions.append(action)
                 observations.append(obs)
@@ -102,3 +104,23 @@ if __name__ == "__main__":
 
     # Analyze latent space
     latent_reps, reduced_reps, episode_returns, episode_steps = analyze_latent_space(ppo_model, envs, device, num_episodes=100, method='pca')
+
+    # Additional analysis: Correlation between latent dimensions and episode returns
+    episode_latents = np.array([np.mean(latent_reps[sum(episode_steps[:i]):sum(episode_steps[:i+1])], axis=0) for i in range(len(episode_returns))])
+    correlations = np.corrcoef(episode_latents.T, episode_returns)[:-1, -1]
+    top_corr_dims = np.argsort(np.abs(correlations))[-5:][::-1]
+    
+    print("\nTop 5 latent dimensions correlated with episode returns:")
+    for dim in top_corr_dims:
+        print(f"Dimension {dim}: Correlation {correlations[dim]:.3f}")
+
+    # Visualize these top dimensions
+    plt.figure(figsize=(15, 10))
+    for i, dim in enumerate(top_corr_dims):
+        plt.subplot(2, 3, i+1)
+        plt.scatter(episode_latents[:, dim], episode_returns)
+        plt.title(f"Dimension {dim}")
+        plt.xlabel("Mean Latent Value")
+        plt.ylabel("Episode Return")
+    plt.tight_layout()
+    plt.show()

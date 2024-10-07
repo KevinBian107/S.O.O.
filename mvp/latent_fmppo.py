@@ -8,6 +8,7 @@ from sklearn.manifold import TSNE
 from fmppo_vector import Args, Agent as FMPPOAgent, make_env
 
 def extract_latent_representations(agent, envs, device, num_episodes=10):
+    '''latent representation is the z directly, action performed is random in here'''
     latent_reps = []
     episode_returns = []
     episode_steps = []
@@ -25,7 +26,8 @@ def extract_latent_representations(agent, envs, device, num_episodes=10):
                 latent_reps.append(z.cpu().numpy())
 
                 # Get action and step environment
-                action, _, _, _ = agent.get_action_and_value(next_obs)
+                # action, _, _, _ = agent.get_action_and_value(next_obs)
+                action = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 next_obs, reward, terminations, truncations, _ = envs.step(action.cpu().numpy())
                 next_obs = torch.Tensor(next_obs).to(device)
                 next_done = torch.logical_or(torch.Tensor(terminations), torch.Tensor(truncations)).to(device)
