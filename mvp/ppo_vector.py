@@ -12,7 +12,7 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
-from mvp.env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
+from env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
 
 @dataclass
 class Args:
@@ -54,7 +54,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         else:
             env = gym.make(env_id)
         
-        env = TargetVelocityWrapper(env, target_velocity=2.0)
+        # env = TargetVelocityWrapper(env, target_velocity=2.0)
+        env = JumpRewardWrapper(env=env, jump_target_height=1.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -348,7 +349,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_vel2.pth"
+    data_filename = f"ppo_vector_jump.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

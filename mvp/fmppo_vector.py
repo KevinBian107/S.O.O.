@@ -20,7 +20,7 @@ from env_wrappers import JumpRewardWrapper, TargetVelocityWrapper
 class Args:
     exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
     env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
-    total_timesteps: int = 300000
+    total_timesteps: int = 200000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -60,7 +60,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             # fixed it by reading Stack Overfloat
         else:
             env = gym.make(env_id)
-        # env = TargetVelocityWrapper(env, target_velocity=2.0)
+        env = TargetVelocityWrapper(env, target_velocity=1.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -477,10 +477,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_3.pth"
+    data_filename = f"fmppo_vector_jump.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_3.pth"
+    data_filename = f"fm_vector_jump.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
