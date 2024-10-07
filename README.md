@@ -80,16 +80,16 @@ PPO and Fm-PPO Agent post-training evaluation on new random environment for 2x r
 
 ![Alt text](demos/vectorized_half_cheetah/eval/eval_vel2.png)
 
-### Latent Representations
+### Latent Representations With PCA
 
 PPO Latent Representation (Action distribution is latent), model action applied:
 
-![Alt text](demos/latent/ppo_latent_1.png)
+![Alt text](demos/latent/ppo_pca_1.png)
 
 FMPPO Latent Representation (Z in encder is latent), model action applied:
 
-![Alt text](demos/latent/fmppo_latent_1.png)
+![Alt text](demos/latent/fmppo_pca_1.png)
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied:
 
-![Alt text](demos/latent/fm_latent_1.png)
+![Alt text](demos/latent/fm_pca_1.png)
