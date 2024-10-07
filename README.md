@@ -23,7 +23,7 @@ Transfer Three Times Core:
 
 PPO and Fm-PPO Agent post-training evaluation on new random environment for same running task as training:
 
-![Alt text](demos/vectorized_half_cheetah/eval/eval_same_task.png)
+![Alt text](demos/vectorized_half_cheetah/eval/eval_vel1.png)
 
 ### Transfer Learning
 

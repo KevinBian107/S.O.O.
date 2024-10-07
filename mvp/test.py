@@ -62,12 +62,12 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     fmppo_agent = FMPPOAgent(envs).to(device)
-    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_vel2.pth")
+    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector.pth")
     fmppo_agent.load_state_dict(torch.load(fmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_vel2.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     episode_num = 100
@@ -77,11 +77,9 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     plt.plot(range(1, len(fmppo_returns)+1), fmppo_returns, label="FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    plt.title("Episode Returns for FM-PPO and PPO")
+    plt.title("Episode Returns for FM-PPO and PPO on 1X Running Task")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()
     plt.grid(True)
     plt.show()
-
-
