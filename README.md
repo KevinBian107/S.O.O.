@@ -61,7 +61,7 @@ Transfer Three Times Core:
 PPO and Fm-PPO Agent post-training evaluation on new random environment for same running task as training:
 
 <div style="text-align: center;">
-  <img src="demos/vectorized_half_cheetah/eval/eval_vel1.png" alt="Alt text" width="500"/>
+  <img src="demos/vectorized_half_cheetah/eval/eval_vel1.png" alt="Alt text" width="650"/>
 </div>
 
 ### Transfer Learning
@@ -77,13 +77,13 @@ Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
 PPO and Fm-PPO Agent post-training evaluation on new random environment for jump task:
 
 <div style="text-align: center;">
-  <img src="demos/vectorized_half_cheetah/eval/eval_jump.png" alt="Alt text" width="500"/>
+  <img src="demos/vectorized_half_cheetah/eval/eval_jump.png" alt="Alt text" width="650"/>
 </div>
 
 PPO and Fm-PPO Agent post-training evaluation on new random environment for 2x running task:
 
 <div style="text-align: center;">
-  <img src="demos/vectorized_half_cheetah/eval/eval_vel2.png" alt="Alt text" width="500"/>
+  <img src="demos/vectorized_half_cheetah/eval/eval_vel2.png" alt="Alt text" width="650"/>
 </div>
 
 ### Latent Representations With PCA
