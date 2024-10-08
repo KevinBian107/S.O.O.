@@ -96,7 +96,7 @@ Fm-Core Latent Representation (Z in encder is latent), random action applied in 
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied in v2 task:
 
-![Alt text](demos/latent/fm_v2_jump_pca_1.png)
+![Alt text](demos/latent/fm_vel2_pca_1.png)
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied in jump task:
 
