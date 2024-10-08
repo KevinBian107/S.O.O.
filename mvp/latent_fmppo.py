@@ -27,7 +27,7 @@ def extract_latent_representations(agent, envs, device, num_episodes=10):
 
                 # Get action and step environment
                 # action, _, _, _ = agent.get_action_and_value(next_obs)
-                action = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+                action = torch.tensor([envs.single_action_space.sample() for _ in range(envs.num_envs)], dtype=torch.float32)
                 next_obs, reward, terminations, truncations, _ = envs.step(action.cpu().numpy())
                 next_obs = torch.Tensor(next_obs).to(device)
                 next_done = torch.logical_or(torch.Tensor(terminations), torch.Tensor(truncations)).to(device)
