@@ -95,12 +95,12 @@ if __name__ == "__main__":
     latent_dim = 32  # Same as FM-PPO latent dimension
     upn_model = UPN(state_dim, action_dim, latent_dim).to(device)
 
-    fm_path = os.path.join(os.getcwd(), "mvp", "params", "fm_vector.pth")
+    fm_path = os.path.join(os.getcwd(), "mvp", "params", "fm_vector_vel2.pth")
     fm_state_dict = torch.load(fm_path, map_location=device)
     upn_model.load_state_dict(fm_state_dict)
 
     # Analyze latent space
-    latent_reps, reduced_reps, episode_returns, episode_lengths = analyze_latent_space(upn_model, envs, device, num_episodes=100, method='tsne')
+    latent_reps, reduced_reps, episode_returns, episode_lengths = analyze_latent_space(upn_model, envs, device, num_episodes=100, method='pca')
 
     # Additional analysis: Correlation between latent dimensions and episode returns
     episode_latents = np.array([np.mean(latent_reps[sum(episode_lengths[:i]):sum(episode_lengths[:i+1])], axis=0) for i in range(len(episode_returns))])

@@ -90,6 +90,14 @@ FMPPO Latent Representation (Z in encder is latent), model action applied:
 
 ![Alt text](demos/latent/fmppo_pca_1.png)
 
-Fm-Core Latent Representation (Z in encder is latent), random action applied:
+Fm-Core Latent Representation (Z in encder is latent), random action applied in v1 task:
 
 ![Alt text](demos/latent/fm_pca_1.png)
+
+Fm-Core Latent Representation (Z in encder is latent), random action applied in v2 task:
+
+![Alt text](demos/latent/fm_v2_jump_pca_1.png)
+
+Fm-Core Latent Representation (Z in encder is latent), random action applied in jump task:
+
+![Alt text](demos/latent/fm_jump_pca_1.png)
