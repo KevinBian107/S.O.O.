@@ -27,7 +27,6 @@ def evaluate_model(agent, envs, device, num_episodes=100):
     perfectly consistent with both ppo and fmppo, previous environment is inconsistent, very delicate.'''
     returns = []
     for episode in range(num_episodes):
-        print(f'Episode: {episode}')
         next_obs, _ = envs.reset()
         next_obs = torch.Tensor(next_obs).to(device)
         next_done = torch.zeros(envs.num_envs).to(device)
@@ -40,6 +39,7 @@ def evaluate_model(agent, envs, device, num_episodes=100):
                 next_obs = torch.Tensor(next_obs).to(device)
                 next_done = torch.logical_or(torch.Tensor(terminations), torch.Tensor(truncations)).to(device)
                 episode_returns += torch.Tensor(reward).to(device) * (~next_done)
+                print(f'Episode: {episode}/{num_episodes} With Rewards: {episode_returns}')
 
         returns.extend(episode_returns.cpu().numpy())
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     plt.plot(range(1, len(fmppo_returns)+1), fmppo_returns, label="FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    plt.title("Episode Returns for FM-PPO and PPO on 1X Running Task")
+    plt.title("Episode Returns for FM-PPO and PPO on 2X Running Task With 1X Running Task Weights")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()

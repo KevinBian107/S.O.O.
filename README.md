@@ -64,7 +64,7 @@ PPO and Fm-PPO Agent post-training evaluation on new random environment for same
   <img src="demos/vectorized_half_cheetah/eval/eval_vel1.png" alt="Alt text" width="650"/>
 </div>
 
-### Transfer Learning
+### Transfer Learning (Plasticity)
 
 PPO trained on 2e5 global steps:
 
@@ -84,6 +84,26 @@ PPO and Fm-PPO Agent post-training evaluation on new random environment for 2x r
 
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_vel2.png" alt="Alt text" width="650"/>
+</div>
+
+PPO and Fm-PPO Agent post-training evaluation using 1X running task weights on jump task:
+
+<div style="text-align: center;">
+  <img src="demos/vectorized_half_cheetah/eval/eval_vel1_on_jump.png" alt="Alt text" width="650"/>
+</div>
+
+PPO and Fm-PPO Agent post-training evaluation using 1X running task weights on 2X running task:
+
+<div style="text-align: center;">
+  <img src="demos/vectorized_half_cheetah/eval/eval_vel1_on_vel2.png" alt="Alt text" width="650"/>
+</div>
+
+### Transfer Learning (Memory Stability)
+
+PPO and Fm-PPO Agent post-training evaluation using jump task weights on 1X running task:
+
+<div style="text-align: center;">
+  <img src="demos/vectorized_half_cheetah/eval/eval_jump_on_vel1.png.png" alt="Alt text" width="650"/>
 </div>
 
 ### Latent Representations With PCA
