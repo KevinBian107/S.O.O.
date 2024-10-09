@@ -23,7 +23,6 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 ![Alt text](demos/dynamics_model.png)
 
 ## FMPPO Control Examples
-
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
@@ -45,65 +44,53 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 All Fm-PPO should start tarining from scratch, with the goal to try to observe how the Fm-Core help the agent to get higher rewards.
 
 PPO trained on 2e5 global steps:
-
 ![Alt text](demos/vectorized_half_cheetah/original/ppo_trained.png)
 
 Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
 
 Transfer Twice Core:
-
 ![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_2.png)
 
 Transfer Three Times Core:
-
 ![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_3.png)
 
 PPO and Fm-PPO Agent post-training evaluation on new random environment for same running task as training:
-
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_vel1.png" alt="Alt text" width="650"/>
 </div>
 
 ### Transfer Learning (Plasticity)
-
 PPO trained on 2e5 global steps:
-
 ![Alt text](demos/vectorized_half_cheetah/jump/ppo_direct.png)
 
 Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
-
 ![Alt text](demos/vectorized_half_cheetah/jump/fmppo_transfer.png)
 
 PPO and Fm-PPO Agent post-training evaluation on new random environment for jump task:
-
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_jump.png" alt="Alt text" width="650"/>
 </div>
 
 PPO and Fm-PPO Agent post-training evaluation on new random environment for 2x running task:
-
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_vel2.png" alt="Alt text" width="650"/>
 </div>
 
 PPO and Fm-PPO Agent post-training evaluation using 1X running task weights on jump task:
-
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_vel1_on_jump.png" alt="Alt text" width="650"/>
 </div>
 
 PPO and Fm-PPO Agent post-training evaluation using 1X running task weights on 2X running task:
-
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_vel1_on_vel2.png" alt="Alt text" width="650"/>
 </div>
 
 ### Transfer Learning (Memory Stability)
-
 PPO and Fm-PPO Agent post-training evaluation using jump task weights on 1X running task:
 
 <div style="text-align: center;">
-  <img src="demos/vectorized_half_cheetah/eval/eval_jump_on_vel1.png.png" alt="Alt text" width="650"/>
+  <img src="demos/vectorized_half_cheetah/eval/eval_jump_on_vel1.png" alt="Alt text" width="650"/>
 </div>
 
 ### Latent Representations With PCA
