@@ -7,6 +7,15 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from ppo_vector import Args, Agent as PPOAgent, make_env
 
+class ModifiedPPOAgent(PPOAgent):
+    def get_state_representation(self, x):
+        # Extract the output of the second-to-last layer of the actor network
+        for i, layer in enumerate(self.actor_mean):
+            x = layer(x)
+            if i == len(self.actor_mean) - 2:  # Second-to-last layer
+                return x
+        return x
+
 def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
     '''latent representations in ppo is the action directly, next action is random'''
     latent_reps = []
@@ -14,6 +23,7 @@ def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
     observations = []
     episode_returns = []
     episode_lengths = []
+    state_reps = []
     
     for episode in range(num_episodes):
         obs, _ = envs.reset()
@@ -26,6 +36,9 @@ def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
             with torch.no_grad():
                 action_mean = ppo_model.actor_mean(obs_tensor)
                 latent_reps.append(action_mean.cpu().numpy().reshape(-1))  # Flatten latent representations
+
+                state_rep = ppo_model.get_state_representation(obs_tensor)
+                state_reps.append(state_rep.cpu().numpy().reshape(-1))
                 
                 action, _, _, _ = ppo_model.get_action_and_value(obs_tensor)
                 # action = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
@@ -42,7 +55,7 @@ def extract_latent_representations(ppo_model, envs, device, num_episodes=10):
         episode_lengths.append(episode_length)
         print(f"Episode {episode + 1}/{num_episodes}, Return: {episode_return}, Length: {episode_length}")
     
-    return np.vstack(latent_reps), episode_returns, episode_lengths
+    return np.vstack(state_reps), episode_returns, episode_lengths
 
 def reduce_dimensionality(latent_reps, method='pca', n_components=2):
     if method == 'pca':
@@ -98,12 +111,12 @@ if __name__ == "__main__":
     )
 
     # Create and load the PPO model
-    ppo_model = PPOAgent(envs).to(device)
+    ppo_model = ModifiedPPOAgent(envs).to(device)
     ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector.pth")
     ppo_model.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # Analyze latent space
-    latent_reps, reduced_reps, episode_returns, episode_steps = analyze_latent_space(ppo_model, envs, device, num_episodes=100, method='tsne')
+    latent_reps, reduced_reps, episode_returns, episode_steps = analyze_latent_space(ppo_model, envs, device, num_episodes=100, method='pca')
 
     # Additional analysis: Correlation between latent dimensions and episode returns
     episode_latents = np.array([np.mean(latent_reps[sum(episode_steps[:i]):sum(episode_steps[:i+1])], axis=0) for i in range(len(episode_returns))])

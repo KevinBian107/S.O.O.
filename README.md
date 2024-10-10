@@ -96,21 +96,16 @@ PPO and Fm-PPO Agent post-training evaluation using jump task weights on 1X runn
 ### Latent Representations With PCA
 
 PPO Latent Representation (Action distribution is latent), model action applied:
-
 ![Alt text](demos/latent/ppo_pca_1.png)
 
 FMPPO Latent Representation (Z in encder is latent), model action applied:
-
 ![Alt text](demos/latent/fmppo_pca_1.png)
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied in v1 task:
-
 ![Alt text](demos/latent/fm_pca_1.png)
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied in v2 task:
-
 ![Alt text](demos/latent/fm_vel2_pca_1.png)
 
 Fm-Core Latent Representation (Z in encder is latent), random action applied in jump task:
-
 ![Alt text](demos/latent/fm_jump_pca_1.png)
