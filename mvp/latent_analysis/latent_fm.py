@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import os
 import torch
 import gymnasium as gym
@@ -5,7 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from fmppo_vector import Args, UPN, make_env
+# from fmppo_vector_latent import Args, UPN, make_env
+from fmppo_vector_prone import Args, UPN, make_env
 
 def extract_latent_representations(upn_model, envs, device, num_episodes=10):
     '''latent representation is z, action performed is random in here'''
@@ -92,10 +98,10 @@ if __name__ == "__main__":
     # Create and load only the UPN model
     state_dim = np.array(envs.single_observation_space.shape).prod()
     action_dim = np.prod(envs.single_action_space.shape)
-    latent_dim = 32  # Same as FM-PPO latent dimension
+    latent_dim = 50  # Same as FM-PPO latent dimension
     upn_model = UPN(state_dim, action_dim, latent_dim).to(device)
 
-    fm_path = os.path.join(os.getcwd(), "mvp", "params", "fm_vector_vel2.pth")
+    fm_path = os.path.join(os.getcwd(), "mvp", "params", "fm_vector_prone.pth")
     fm_state_dict = torch.load(fm_path, map_location=device)
     upn_model.load_state_dict(fm_state_dict)
 

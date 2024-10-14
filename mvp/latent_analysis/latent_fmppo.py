@@ -99,7 +99,7 @@ if __name__ == "__main__":
     fmppo_agent.load_state_dict(torch.load(fmppo_path, map_location=device))
 
     # Analyze latent space
-    latent_reps, reduced_reps, episode_returns, episode_steps = analyze_latent_space(fmppo_agent, envs, device, num_episodes=100, method='tsne')
+    latent_reps, reduced_reps, episode_returns, episode_steps = analyze_latent_space(fmppo_agent, envs, device, num_episodes=100, method='pca')
 
     # Additional analysis: Correlation between latent dimensions and episode returns
     episode_latents = np.array([np.mean(latent_reps[sum(episode_steps[:i]):sum(episode_steps[:i+1])], axis=0) for i in range(len(episode_returns))])
