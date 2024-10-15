@@ -19,9 +19,9 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 
 @dataclass
 class Args:
-    exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
-    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
-    total_timesteps: int = 3000000
+    exp_name: str = "fmppo_halfcheetah"
+    env_id: str = "HalfCheetah-v4"
+    total_timesteps: int = 200000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -42,8 +42,8 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 1.0
-    load_upn: str = None#"fm_vector_latent_test.pth"
-    mix_coord: bool = True # this helps greatly
+    load_upn: str = None
+    mix_coord: bool = True
     num_future_steps: int = 3
 
     # to be set at runtime
@@ -86,44 +86,62 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class UPN(nn.Module):
     def __init__(self, state_dim, action_dim, latent_dim):
         super(UPN, self).__init__()
+
         self.encoder = nn.Sequential(
             nn.Linear(state_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
             nn.Linear(64, latent_dim)
         )
+        
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
             nn.Linear(64, state_dim)
         )
-        self.dynamics = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, latent_dim)
-        )
-        self.inverse_dynamics = nn.Sequential(
-            nn.Linear(latent_dim * 2, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, action_dim)
-        )
+
+        # MDN-RNN for forward dynamics (predicts next latent state)
+        self.forward_rnn = nn.LSTM(latent_dim + action_dim, 64, batch_first=True)
+        self.forward_mdn = nn.Linear(64, latent_dim * 3)  # output mean, std, mixture coeff
+
+        # MDN-RNN for inverse dynamics (predicts action from latent states)
+        self.inverse_rnn = nn.LSTM(latent_dim * 2, 64, batch_first=True)
+        self.inverse_mdn = nn.Linear(64, action_dim * 3)  # output mean, std, mixture coeff
 
     def forward(self, state, action, next_state):
+        # Encode state and next state
         z = self.encoder(state)
         z_next = self.encoder(next_state)
-        z_pred = self.dynamics(torch.cat([z, action], dim=-1))
-        action_pred = self.inverse_dynamics(torch.cat([z, z_next], dim=-1))
+
+        # Forward dynamics with MDN-RNN (predicting next latent state)
+        forward_input = torch.cat([z, action], dim=-1).unsqueeze(0)  # Adding batch dimension
+        h, _ = self.forward_rnn(forward_input)
+        mdn_output = self.forward_mdn(h.squeeze(0))
+        z_pred = self.sample_mdn(mdn_output, latent_dim=z.size(-1)) # 取出来 32, 32, 32
+
+        # Inverse dynamics with MDN-RNN (predicting action from latent states)
+        inverse_input = torch.cat([z, z_next], dim=-1).unsqueeze(0)
+        h_inv, _ = self.inverse_rnn(inverse_input)
+        mdn_output_inv = self.inverse_mdn(h_inv.squeeze(0))
+        action_pred = self.sample_mdn(mdn_output_inv, latent_dim=action.size(-1)) # 取出来 32, 32, 32
+
+        # Decode latent variables to reconstructed states
         state_recon = self.decoder(z)
-        next_state_pred = self.decoder(z_pred)
         next_state_recon = self.decoder(z_next)
-        return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
+        next_state_pred = self.decoder(z_pred)
+
+        return z, z_next, z_pred, action_pred, mdn_output.squeeze(), mdn_output_inv.squeeze(), state_recon, next_state_recon, next_state_pred
+
+    def sample_mdn(self, mdn_output, latent_dim):
+        # Extract parameters for the mixture of Gaussians
+        means = mdn_output[:, :latent_dim] # consider BATCH
+        stds = torch.exp(mdn_output[:, latent_dim:2*latent_dim])
+        # mixture_coeffs = F.softmax(mdn_output[:, 2*latent_dim:], dim=-1)
+
+        # Sampling from the mixture of Gaussians
+        # mixture_idx = torch.multinomial(mixture_coeffs, 1).squeeze()
+        sampled_latent = means + stds * torch.randn_like(stds)
+        
+        return sampled_latent
     
 class Agent(nn.Module):
     def __init__(self, envs):
@@ -165,7 +183,6 @@ class Agent(nn.Module):
 
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
 
-    
     def load_upn(self, file_path):
         '''Load only the UPN model parameters from the specified file path,
         Usage for transfering previously elarned experiences to this new one.'''
@@ -176,13 +193,50 @@ class Agent(nn.Module):
         else:
             print(f"No existing UPN model found at {file_path}, starting with new parameters.")
 
+def mdn_loss(mdn_output, target, latent_dim):
+    ''' Compute MDN loss as the negative log-likelihood of the target under the mixture model '''
+    # Ensure the output size is correct
+    assert mdn_output.size(1) == latent_dim * 3, f"MDN output size mismatch, expected {latent_dim * 3}, got {mdn_output.size(1)}"
+
+    # Extract means, stds, and mixture coefficients from the MDN output
+    means = mdn_output[:, :latent_dim]
+    stds = torch.exp(mdn_output[:, latent_dim:2*latent_dim])  # stds should be positive, hence exp
+    mixture_coeffs = F.softmax(mdn_output[:, 2*latent_dim:], dim=-1)  # mixture coefficients should sum to 1
+
+    # Ensure that means and stds have the same shape as target
+    assert means.shape == stds.shape == target.shape, f"Shape mismatch: means {means.shape}, stds {stds.shape}, target {target.shape}"
+
+    # Compute log-likelihood of the target under the Gaussian mixture
+    dist = Normal(means, stds)
+    log_probs = dist.log_prob(target)  # calculate log-probs for each component
+    log_probs = torch.logsumexp(log_probs + torch.log(mixture_coeffs), dim=-1)  # combine with mixture coeffs
+
+    return -log_probs.mean()  # return negative log-likelihood
+
+
 def compute_upn_loss(upn, state, action, next_state):
-    z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred = upn(state, action, next_state)
+    # Forward pass through UPN
+    z, z_next, z_pred, action_pred, forward_mdn_output, inverse_mdn_output, state_recon, next_state_recon, next_state_pred = upn(state, action, next_state)
+
+    # Reconstruction losses
     recon_loss = F.mse_loss(state_recon, state) + F.mse_loss(next_state_recon, next_state)
+
+    # Consistency losses
     consistency_loss = F.mse_loss(next_state_pred, next_state)
+
+    # print(f"MDN forward output shape: {z_pred.shape}")
+
+    # Forward dynamics loss
+    # forward_loss_mdn = mdn_loss(forward_mdn_output, z_next, latent_dim=z.size(-1))
     forward_loss = F.mse_loss(z_pred, z_next.detach())
+
+    # Inverse dynamics loss
+    # inverse_loss_mdn = mdn_loss(inverse_mdn_output, action, latent_dim=action.size(-1))
     inverse_loss = F.mse_loss(action_pred, action)
+
+    # Total UPN loss
     upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
+
     return upn_loss
 
 def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah.npz'):
@@ -493,10 +547,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_latent_test_3e6.pth"
+    data_filename = f"fmppo_vector_latent_test_rnn.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_latent_test_3e6.pth"
+    data_filename = f"fm_vector_latent_test_rnn.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
