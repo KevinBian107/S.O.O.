@@ -19,15 +19,15 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 
 @dataclass
 class Args:
-    exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
-    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
-    total_timesteps: int = 1000000
+    exp_name: str = "fmppo_halfcheetah"
+    env_id: str = "HalfCheetah-v4"
+    total_timesteps: int = 200000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
     learning_rate: float = 3e-4
-    latent_size: int = 50
+    latent_size: int = 32
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
@@ -42,7 +42,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    load_upn: str = None #"fm_vector_prone.pth"
+    load_upn: str = "fm_vector_prone.pth"
     mix_coord: bool = True # this helps greatly
 
     # to be set at runtime
@@ -60,10 +60,10 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             env = gym.make(env_id)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
-        env = ActionMaskingWrapper(env=env, mask_prob=0.2)
-        env = DelayedRewardWrapper(env, delay_steps=20)
-        env = NoisyObservationWrapper(env, noise_scale=0.1)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
+        # env = DelayedRewardWrapper(env, delay_steps=20)
+        # env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -110,7 +110,7 @@ class Agent(nn.Module):
         super().__init__()
         state_dim = np.array(envs.single_observation_space.shape).prod()
         action_dim = np.prod(envs.single_action_space.shape)
-        latent_dim = 50 #args.latent_size
+        latent_dim = args.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(
@@ -473,10 +473,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_prone_test.pth"
+    data_filename = f"fmppo_vector_prone.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_prone_test.pth"
+    data_filename = f"fm_vector_prone.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

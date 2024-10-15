@@ -42,7 +42,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 1.0
-    load_upn: str = None
+    load_upn: str = "fm_vector_latent_test_rnn.pth"
     mix_coord: bool = True
     num_future_steps: int = 3
 
@@ -63,10 +63,10 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
-        env = ActionMaskingWrapper(env=env, mask_prob=0.2)
-        env = DelayedRewardWrapper(env, delay_steps=20)
-        env = NoisyObservationWrapper(env, noise_scale=0.1)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
+        # env = DelayedRewardWrapper(env, delay_steps=20)
+        # env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -148,7 +148,7 @@ class Agent(nn.Module):
         super().__init__()
         state_dim = np.array(envs.single_observation_space.shape).prod()
         action_dim = np.prod(envs.single_action_space.shape)
-        latent_dim = args.latent_size
+        latent_dim = 32 #args.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(

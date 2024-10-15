@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
 
     # Path to the saved model (adjust the path if necessary)
-    model_path = os.path.join(os.getcwd(), 'mvp', 'params', 'ppo_vector.pth')
+    model_path = os.path.join(os.getcwd(), 'mvp', 'params', 'ppo_vector_5e6.pth')
 
     # Load the agent
     agent = load_agent(Agent, model_path, envs, device)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'data')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = "imitation_data_half_cheetah.npz"
+    data_filename = "imitation_data_half_cheetah_5e6.npz"
     npz_path = os.path.join(save_dir, data_filename)
     np.savez(npz_path, states=state_history, actions=action_history, next_states=next_state_history)
 

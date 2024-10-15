@@ -19,9 +19,9 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 
 @dataclass
 class Args:
-    exp_name: str = "fmppo_halfcheetah" #"fmppo_inverted_pendulum"
-    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
-    total_timesteps: int = 3000000
+    exp_name: str = "fmppo_halfcheetah"
+    env_id: str = "HalfCheetah-v4"
+    total_timesteps: int = 1000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -41,10 +41,9 @@ class Args:
     ent_coef: float = 0.0
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
-    upn_coef: float = 1.0
-    load_upn: str = None#"fm_vector_latent_test.pth"
-    mix_coord: bool = True # this helps greatly
-    num_future_steps: int = 3
+    upn_coef: float = 0.8
+    load_upn: str = None #"fm_vector_latent_1e6.pth"
+    mix_coord: bool = False # this helps greatly
 
     # to be set at runtime
     batch_size: int = 0 
@@ -63,9 +62,9 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
-        env = ActionMaskingWrapper(env=env, mask_prob=0.2)
-        env = DelayedRewardWrapper(env, delay_steps=20)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.1)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.1)
+        env = DelayedRewardWrapper(env, delay_steps=40)
         env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -89,28 +88,20 @@ class UPN(nn.Module):
         self.encoder = nn.Sequential(
             nn.Linear(state_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
             nn.Linear(64, latent_dim)
         )
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, state_dim)
         )
         self.dynamics = nn.Sequential(
             nn.Linear(latent_dim + action_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
             nn.Linear(64, latent_dim)
         )
         self.inverse_dynamics = nn.Sequential(
             nn.Linear(latent_dim * 2, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, action_dim)
         )
@@ -130,7 +121,7 @@ class Agent(nn.Module):
         super().__init__()
         state_dim = np.array(envs.single_observation_space.shape).prod()
         action_dim = np.prod(envs.single_action_space.shape)
-        latent_dim = args.latent_size
+        latent_dim = 32#args.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(
@@ -183,9 +174,10 @@ def compute_upn_loss(upn, state, action, next_state):
     forward_loss = F.mse_loss(z_pred, z_next.detach())
     inverse_loss = F.mse_loss(action_pred, action)
     upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
-    return upn_loss
 
-def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah.npz'):
+    return recon_loss, forward_loss, inverse_loss, consistency_loss
+
+def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah_5e6.npz'):
     '''3D: sample_size, env_dim, Dof_dim, no sample, concatination direclty'''
 
     # Load imitation data
@@ -285,7 +277,11 @@ if __name__ == "__main__":
         "approx_kls": [],
         "clipfracs": [],
         "explained_variances": [],
-        "upn_losses": []
+        "upn_losses": [],
+        "recon_losses":[],
+        "forward_losses":[],
+        "inverse_losses":[],
+        "consist_losses":[]
     }
 
     next_obs, _ = envs.reset(seed=args.seed)
@@ -401,7 +397,10 @@ if __name__ == "__main__":
                 entropy_loss = entropy.mean()
 
                 # previously pass in obs twice, solidifies state
-                upn_loss = compute_upn_loss(agent.upn, b_obs_imitate[mb_inds], b_actions_imitate[mb_inds], b_next_obs_imitate[mb_inds]) #future_states[mb_inds])
+                recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(agent.upn, b_obs_imitate[mb_inds], b_actions_imitate[mb_inds], b_next_obs_imitate[mb_inds]) #future_states[mb_inds])
+
+                with torch.no_grad():
+                    upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
 
                 loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef
 
@@ -428,6 +427,11 @@ if __name__ == "__main__":
 
         metrics["value_losses"].append(v_loss.item())
         metrics["policy_losses"].append(pg_loss.item())
+        metrics['upn_losses'].append(upn_loss.item())
+        metrics['forward_losses'].append(forward_loss.item())
+        metrics['inverse_losses'].append(inverse_loss.item())
+        metrics["recon_losses"].append(recon_loss.item())
+        metrics["consist_losses"].append(consistency_loss.item())
         metrics["entropies"].append(entropy_loss.item())
         metrics["approx_kls"].append(approx_kl.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
@@ -468,6 +472,11 @@ if __name__ == "__main__":
     plt.subplot(2, 3, 4)
     plt.plot(metrics["value_losses"], label='Value Loss')
     plt.plot(metrics["policy_losses"], label='Policy Loss')
+    plt.plot(metrics["upn_losses"], label='UPN Loss')
+    plt.plot(metrics["forward_losses"], label='Forward Loss')
+    plt.plot(metrics["inverse_losses"], label='Inverse Loss')
+    plt.plot(metrics["recon_losses"], label='Reconstruction Loss')
+    plt.plot(metrics["consist_losses"], label='Consistency Loss')
     plt.title('Losses')
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
@@ -493,10 +502,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_latent_test_3e6.pth"
+    data_filename = f"fmppo_vector_latent_1e6_noisy.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_latent_test_3e6.pth"
+    data_filename = f"fm_vector_latent_1e6_noisy.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
