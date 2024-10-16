@@ -7,6 +7,7 @@ from collections import deque
 
 import gymnasium as gym
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,13 +22,14 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 class Args:
     exp_name: str = "fmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    total_timesteps: int = 1000000
+    total_timesteps: int = 5000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
-    learning_rate: float = 3e-4
-    latent_size: int = 32
+    ppo_learning_rate: float = 3e-4
+    upn_learning_rate: float = 3e-7 # lower learning rate
+    latent_size: int = 100
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
@@ -42,13 +44,15 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    load_upn: str = None #"fm_vector_latent_1e6.pth"
-    mix_coord: bool = False # this helps greatly
+    load_upn: str = "supervised_upn_100.pth"
+    mix_coord: bool = True # this helps greatly
 
     # to be set at runtime
     batch_size: int = 0 
     minibatch_size: int = 0
     iterations: int = 0
+
+args = Args()
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
@@ -62,9 +66,9 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.1)
-        # env = ActionMaskingWrapper(env=env, mask_prob=0.1)
-        env = DelayedRewardWrapper(env, delay_steps=40)
+        env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
+        env = ActionMaskingWrapper(env=env, mask_prob=0.5)
+        env = DelayedRewardWrapper(env, delay_steps=50)
         env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -121,7 +125,7 @@ class Agent(nn.Module):
         super().__init__()
         state_dim = np.array(envs.single_observation_space.shape).prod()
         action_dim = np.prod(envs.single_action_space.shape)
-        latent_dim = 32#args.latent_size
+        latent_dim = args.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(
@@ -223,7 +227,6 @@ def plot_metrics(metrics, show_result=False):
     plt.pause(0.001)
 
 if __name__ == "__main__":
-    args = Args()
     args.batch_size = args.num_steps * args.num_envs
     args.minibatch_size = args.batch_size // args.num_minibatches
     args.iterations = args.total_timesteps // args.batch_size
@@ -252,7 +255,14 @@ if __name__ == "__main__":
         # Attempt to load UPN weights
         agent.load_upn(load_path)
 
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    # Optimizer for PPO (actor and critic)
+    ppo_optimizer = optim.Adam([
+    {'params': agent.actor_mean.parameters()},
+    {'params': agent.actor_logstd},
+    {'params': agent.critic.parameters()}], lr=args.ppo_learning_rate, eps=1e-5)
+
+    # Optimizer for UPN
+    upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args.upn_learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
@@ -291,10 +301,10 @@ if __name__ == "__main__":
     for iteration in range(1, args.iterations + 1):
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.iterations
-            lrnow = frac * args.learning_rate
-            optimizer.param_groups[0]["lr"] = lrnow
+            lrnow = frac * args.ppo_learning_rate
+            ppo_optimizer.param_groups[0]["lr"] = lrnow
 
-        metrics["learning_rates"].append(optimizer.param_groups[0]["lr"])
+        metrics["learning_rates"].append(ppo_optimizer.param_groups[0]["lr"])
 
         for step in range(0, args.num_steps):
             global_step += args.num_envs
@@ -399,13 +409,33 @@ if __name__ == "__main__":
                 # previously pass in obs twice, solidifies state
                 recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(agent.upn, b_obs_imitate[mb_inds], b_actions_imitate[mb_inds], b_next_obs_imitate[mb_inds]) #future_states[mb_inds])
 
-                with torch.no_grad():
-                    upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
-
+                # with torch.no_grad():
+                upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
+                upn_loss = upn_loss * args.upn_coef
+                
                 loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef
 
-                optimizer.zero_grad()
-                loss.backward()
+                ppo_loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                
+                # PPO backward pass and optimization
+                ppo_optimizer.zero_grad()
+                ppo_loss.backward()
+                nn.utils.clip_grad_norm_(
+                    list(agent.actor_mean.parameters()) + 
+                    [agent.actor_logstd] + 
+                    list(agent.critic.parameters()), 
+                    args.max_grad_norm
+                )
+                ppo_optimizer.step()
+
+                # UPN backward pass and optimization
+                upn_optimizer.zero_grad()
+                upn_loss.backward()
+                nn.utils.clip_grad_norm_(agent.upn.parameters(), args.max_grad_norm)
+                upn_optimizer.step()
+
+                # optimizer.zero_grad()
+                # loss.backward()
 
                 for name, param in agent.named_parameters():
                     if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
@@ -417,8 +447,8 @@ if __name__ == "__main__":
                 #         grad_norms.append(param.grad.norm().item())
                 # print("Max grad norm:", max(grad_norms))
 
-                nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
-                optimizer.step()
+                # nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+                # # optimizer.step()
 
         # Logging
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
@@ -447,6 +477,16 @@ if __name__ == "__main__":
 
     plt.subplot(2, 3, 1)
     plt.plot(metrics["episodic_returns"])
+
+    avg_interval = 50
+    # Ensure that metrics["episodic_returns"] is a 1D list or array
+    episodic_returns = np.array(metrics["episodic_returns"]).flatten()
+
+    # Now apply np.convolve to calculate the rolling average
+    if len(episodic_returns) >= avg_interval:
+        avg_returns = np.convolve(episodic_returns, np.ones(avg_interval) / avg_interval, mode='valid')
+        plt.plot(range(avg_interval - 1, len(episodic_returns)), avg_returns, label=f"{avg_interval}-Episode Average", color="orange")
+
     plt.title('Episodic Returns')
     plt.xlabel('Episode')
     plt.ylabel('Return')
@@ -502,10 +542,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"fmppo_vector_latent_1e6_noisy.pth"
+    data_filename = f"sfmppo_vector_pomdp_delay.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"fm_vector_latent_1e6_noisy.pth"
+    data_filename = f"sfm_vector_pomdp_delay.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

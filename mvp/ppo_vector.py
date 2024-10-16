@@ -23,7 +23,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 1000000
+    total_timesteps: int = 2000000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -59,9 +59,9 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = JumpRewardWrapper(env=env, jump_target_height=1.0)
         # env = MultiTimescaleWrapper(env, slow_scale=0.001, fast_scale=0.1)
-        env = DelayedRewardWrapper(env, delay_steps=40)
-        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
-        # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
+        env = DelayedRewardWrapper(env, delay_steps=50)
+        env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
+        env = ActionMaskingWrapper(env=env, mask_prob=0.5)
         env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -301,6 +301,15 @@ if __name__ == "__main__":
 
     plt.subplot(2, 3, 1)
     plt.plot(episodic_returns)
+    avg_interval = 50
+    # Ensure that metrics["episodic_returns"] is a 1D list or array
+    episodic_returns = np.array(episodic_returns).flatten()
+
+    # Now apply np.convolve to calculate the rolling average
+    if len(episodic_returns) >= avg_interval:
+        avg_returns = np.convolve(episodic_returns, np.ones(avg_interval) / avg_interval, mode='valid')
+        plt.plot(range(avg_interval - 1, len(episodic_returns)), avg_returns, label=f"{avg_interval}-Episode Average", color="orange")
+
     plt.title('Episodic Returns')
     plt.xlabel('Episode')
     plt.ylabel('Return')
@@ -362,7 +371,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_1e6_noisy.pth"
+    data_filename = f"ppo_vector_pomdp_delay.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

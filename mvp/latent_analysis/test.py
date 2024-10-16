@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.distributions import Normal
 import torch.nn as nn
-from fmppo_vector_latent import Args, Agent as FMPPOAgent, make_env
+from sfmppo import Args, Agent as SFMPPOAgent, make_env
 from fmppo_vector_prone import Agent as ProneAgent
 from ppo_vector import Agent as PPOAgent
 import random
@@ -53,13 +53,13 @@ if __name__ == "__main__":
     # env = gym.vector.SyncVectorEnv([lambda: JumpRewardWrapper(gym.make(env_id), jump_target_height=1.0)])
 
     # Load the FM-PPO model
-    fmppo_agent = FMPPOAgent(envs).to(device)
-    fmppo_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_latent_1e6.pth")
-    fmppo_agent.load_state_dict(torch.load(fmppo_path, map_location=device))
+    sfmppo_agent = SFMPPOAgent(envs).to(device)
+    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_vector_pomdp.pth")
+    sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_5e6.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_pomdp.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # prone_agent = ProneAgent(envs).to(device)
@@ -67,15 +67,15 @@ if __name__ == "__main__":
     # prone_agent.load_state_dict(torch.load(prone_path, map_location=device))
 
     episode_num = 100
-    fmppo_returns = evaluate_model(fmppo_agent, envs, device, num_episodes=episode_num)
+    sfmppo_returns = evaluate_model(sfmppo_agent, envs, device, num_episodes=episode_num)
     # prone_returns = evaluate_model(prone_agent, envs, device, num_episodes=episode_num)
     ppo_returns = evaluate_model(ppo_agent, envs, device, num_episodes=episode_num)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, len(fmppo_returns)+1), fmppo_returns, label="FM-PPO", marker='o')
+    plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="FM-PPO", marker='o')
     # plt.plot(range(1, len(prone_returns)+1), prone_returns, label="Prone FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    plt.title("Episode Returns for PPO, FM-PPO and Prone FM-PPO on Delayed Reward")
+    plt.title("Episode Returns for PPO & SFM-PPO Trained On 0.5 PA/POMDP & Delay Rewards Env, Test On Normal Env")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()
