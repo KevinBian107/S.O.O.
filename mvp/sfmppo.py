@@ -22,13 +22,13 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 class Args:
     exp_name: str = "fmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    total_timesteps: int = 5000000
+    total_timesteps: int = 1000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
     ppo_learning_rate: float = 3e-4
-    upn_learning_rate: float = 3e-7 # lower learning rate
+    upn_learning_rate: float = 8e-5 # lower learning rate
     latent_size: int = 100
     num_envs: int = 1
     num_steps: int = 2048
@@ -44,7 +44,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    load_upn: str = "supervised_upn_100.pth"
+    load_upn: str = "supervised_upn_100_10000_less_train.pth"
     mix_coord: bool = True # this helps greatly
 
     # to be set at runtime
@@ -66,10 +66,10 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
-        env = ActionMaskingWrapper(env=env, mask_prob=0.5)
-        env = DelayedRewardWrapper(env, delay_steps=50)
-        env = NoisyObservationWrapper(env, noise_scale=0.1)
+        env = PartialObservabilityWrapper(env=env, observable_ratio=0.8)
+        env = ActionMaskingWrapper(env=env, mask_prob=0.8)
+        env = DelayedRewardWrapper(env, delay_steps=20)
+        # env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -181,7 +181,7 @@ def compute_upn_loss(upn, state, action, next_state):
 
     return recon_loss, forward_loss, inverse_loss, consistency_loss
 
-def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah_5e6.npz'):
+def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah_ppo_5e6.npz'):
     '''3D: sample_size, env_dim, Dof_dim, no sample, concatination direclty'''
 
     # Load imitation data
@@ -542,10 +542,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"sfmppo_vector_pomdp_delay.pth"
+    data_filename = f"sfmppo_test.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"sfm_vector_pomdp_delay.pth"
+    data_filename = f"sfm_test.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

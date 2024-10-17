@@ -6,13 +6,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 
+# ensure data is correct, is all in the data
 class Args:
     total_timesteps: int = 1000000
     learning_rate: float = 3e-4
     batch_size: int = 64
     hidden_size: int = 64
     latent_size: int = 100
-    num_epochs: int = 1000
+    num_epochs: int = 500
     cuda: bool = True
 
 args = Args()
@@ -53,7 +54,7 @@ class UPN(nn.Module):
         next_state_recon = self.decoder(z_next)
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='mvp/data/imitation_data_half_cheetah_5e6.npz'):
+def load_data(file_path='mvp/data/imitation_data_half_cheetah_ppo_5e6.npz'):
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
     actions = torch.FloatTensor(data['actions']).to(device)
@@ -67,6 +68,13 @@ def compute_upn_loss(upn, state, action, next_state):
     forward_loss = nn.MSELoss()(z_pred, z_next.detach())
     inverse_loss = nn.MSELoss()(action_pred, action)
     total_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
+    
+    # latent_consistency_loss = nn.MSELoss()(z_pred, z_next)
+    # total_loss += latent_consistency_loss
+
+    latent_regularization = torch.mean(torch.norm(z, p=2, dim=-1)) + torch.mean(torch.norm(z_next, p=2, dim=-1))
+    total_loss += 0.01 * latent_regularization
+
     return total_loss, recon_loss, forward_loss, inverse_loss, consistency_loss
 
 def train_model(model, dataloader, optimizer):
@@ -141,7 +149,7 @@ def main():
     val_dataset = TensorDataset(val_states, val_actions, val_next_states)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False) # need to have shuffle
 
     # debug 1 by 1, trace from error back to where you think might be wrong,
     # then check what is passed in, does it match your expectation
@@ -152,7 +160,10 @@ def main():
     print(f"Action dimension: {action_dim}")
 
     model = UPN(state_dim, action_dim, args.latent_size).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
+
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-5)
 
     train_losses = []
     val_losses = []
@@ -173,7 +184,7 @@ def main():
     # Save the model
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
-    model_filename = "supervised_upn_100.pth"
+    model_filename = "supervised_upn_100_10000_less_train.pth"
     model_path = os.path.join(save_dir, model_filename)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")

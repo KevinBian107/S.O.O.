@@ -24,19 +24,27 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 ## FMPPO Control Examples
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
-          <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../assets/fmppo_demo1.mp4" type="video/mp4">
+              <source src="../VNL-MVP/demo1.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Inverted Pendulum agent trained using Fm-PPO</blockquote>
           </div>
-          <div style="width: 50%; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../assets/fmppo_demo2.mp4" type="video/mp4">
+              <source src="../VNL-MVP/sfmppo_converge_712.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Half Cheetah agent trained using Fm-PPO</blockquote>
+            <blockquote>Deep-RL Half Cheetah agent trained using SFm-PPO</blockquote>
+          </div>
+        </div>
+        <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
+            <video controls autoplay style="width: 100%; height: auto;" muted>
+              <source src="../VNL-MVP/demos/ppo_5e6_nice.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
           </div>
         </div>
 
@@ -92,20 +100,3 @@ PPO and Fm-PPO Agent post-training evaluation using jump task weights on 1X runn
 <div style="text-align: center;">
   <img src="demos/vectorized_half_cheetah/eval/eval_jump_on_vel1.png" alt="Alt text" width="650"/>
 </div>
-
-### Latent Representations With PCA
-
-PPO Latent Representation (Action distribution is latent), model action applied:
-![Alt text](demos/latent/ppo_pca_1.png)
-
-FMPPO Latent Representation (Z in encder is latent), model action applied:
-![Alt text](demos/latent/fmppo_pca_1.png)
-
-Fm-Core Latent Representation (Z in encder is latent), random action applied in v1 task:
-![Alt text](demos/latent/fm_pca_1.png)
-
-Fm-Core Latent Representation (Z in encder is latent), random action applied in v2 task:
-![Alt text](demos/latent/fm_vel2_pca_1.png)
-
-Fm-Core Latent Representation (Z in encder is latent), random action applied in jump task:
-![Alt text](demos/latent/fm_jump_pca_1.png)

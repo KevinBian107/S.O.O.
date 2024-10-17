@@ -54,12 +54,12 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
-    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_vector_pomdp.pth")
+    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_test.pth")
     sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_pomdp.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_5e6.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # prone_agent = ProneAgent(envs).to(device)
@@ -75,7 +75,8 @@ if __name__ == "__main__":
     plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="FM-PPO", marker='o')
     # plt.plot(range(1, len(prone_returns)+1), prone_returns, label="Prone FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    plt.title("Episode Returns for PPO & SFM-PPO Trained On 0.5 PA/POMDP & Delay Rewards Env, Test On Normal Env")
+    plt.title("Episode Returns for PPO & SFM-PPO On 0.8 PA/POMDP And 20 Steps Delay Rewards Env")
+    # plt.title("Episode Returns for PPO & SFM-PPO On Standard Half-Cheetah Env")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()

@@ -59,10 +59,10 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = JumpRewardWrapper(env=env, jump_target_height=1.0)
         # env = MultiTimescaleWrapper(env, slow_scale=0.001, fast_scale=0.1)
-        env = DelayedRewardWrapper(env, delay_steps=50)
-        env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
-        env = ActionMaskingWrapper(env=env, mask_prob=0.5)
-        env = NoisyObservationWrapper(env, noise_scale=0.1)
+        # env = DelayedRewardWrapper(env, delay_steps=50)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
+        # env = NoisyObservationWrapper(env, noise_scale=0.1)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_pomdp_delay.pth"
+    data_filename = f"ppo_vector_test.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)

@@ -4,6 +4,10 @@ import numpy as np
 import gymnasium as gym
 from ppo_vector import Agent, Args, make_env  # Import the Agent class, Args, and make_env from the training file
 
+# ensure env did not open noise
+target_steps = 10000
+collected_steps = 0
+
 # Function to load the saved model
 def load_agent(agent_class, path, envs, device):
     agent = agent_class(envs).to(device)
@@ -37,22 +41,28 @@ if __name__ == "__main__":
     obs = torch.Tensor(obs).to(device)
     done = False
 
-    while not done:
-        with torch.no_grad():
-            action, _, _, _ = agent.get_action_and_value(obs)
+    while collected_steps < target_steps:
+        done = False
+        while not done:
+            with torch.no_grad():
+                action, _, _, _ = agent.get_action_and_value(obs)
 
-        # Log the current state and action
-        state_history.append(obs.cpu().numpy())
-        action_history.append(action.cpu().numpy())
+            # Log the current state and action
+            state_history.append(obs.cpu().numpy())
+            action_history.append(action.cpu().numpy())
 
-        # Step the environment
-        next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-        done = np.logical_or(terminations, truncations)
+            # Step the environment
+            next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            done = np.logical_or(terminations, truncations)
 
-        # Log the next state
-        next_state_history.append(next_obs)
+            # Log the next state
+            next_state_history.append(next_obs)
 
-        obs = torch.Tensor(next_obs).to(device)
+            obs = torch.Tensor(next_obs).to(device)
+            collected_steps += 1
+
+            if collected_steps >= target_steps:
+                break
 
     # Convert to numpy arrays
     state_history = np.array(state_history)
@@ -63,7 +73,7 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'data')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = "imitation_data_half_cheetah_5e6.npz"
+    data_filename = "imitation_data_half_cheetah_ppo_5e6.npz"
     npz_path = os.path.join(save_dir, data_filename)
     np.savez(npz_path, states=state_history, actions=action_history, next_states=next_state_history)
 
