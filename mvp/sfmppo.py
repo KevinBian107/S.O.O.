@@ -65,7 +65,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        # env = JumpRewardWrapper(env, jump_target_height=2.0)
+        env = JumpRewardWrapper(env, jump_target_height=2.0)
         env = PartialObservabilityWrapper(env=env, observable_ratio=0.8)
         env = ActionMaskingWrapper(env=env, mask_prob=0.8)
         env = DelayedRewardWrapper(env, delay_steps=20)

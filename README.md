@@ -12,15 +12,6 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 - Objective 2: See if the Forward Model would resemble functionality and behavior of the cerebellum (for example, showing gradual learning of new motor skills).
   - Idealy using a more biological realistic model with more biological realistic task such as the rodent model in VNL.
 
-### Current Progress:
-1. Fm-Core transfer significantly improves same task training and testing performance (by same task, it means that the pre-trained Fm-core and Fm-PPO is trained in the same nevironmental setup).
-2. Fm-Core supports forward transfer learning (plasticity) and shows both training performance improvement and generalization performance during evaluation time.
-  - When we find a good core, really good starting ground and add on domain specific experience.
-  - Concerns with overfitting.
-  - Still on-going testing on checking backward transfer (memory stability)
-3. Latent representation analysis on-going.
-
-![Alt text](demos/dynamics_model.png)
 
 ## FMPPO Control Examples
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
@@ -46,3 +37,13 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
             <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
         </div>
 </div>
+
+## Current Progress:
+1. Fm-Core transfer significantly improves same task training and testing performance (by same task, it means that the pre-trained Fm-core and Fm-PPO is trained in the same nevironmental setup).
+2. Fm-Core supports forward transfer learning (plasticity) and shows both training performance improvement and generalization performance during evaluation time.
+  - When we find a good core, really good starting ground and add on domain specific experience.
+  - Concerns with overfitting.
+  - Still on-going testing on checking backward transfer (memory stability)
+3. Latent representation analysis on-going.
+
+![Alt text](demos/dynamics_model.png)
