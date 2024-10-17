@@ -47,22 +47,3 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
             <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
           </div>
         </div>
-
-### Retrained PPO & Fm-PPO Agents on Half-Cheetah Task
-All Fm-PPO should start tarining from scratch, with the goal to try to observe how the Fm-Core help the agent to get higher rewards.
-
-PPO trained on 2e5 global steps:
-![Alt text](demos/vectorized_half_cheetah/original/ppo_trained.png)
-
-Fm-PPO trained on 2e5 global steps with transfered Fm-core and imitation data:
-
-Transfer Twice Core:
-![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_2.png)
-
-Transfer Three Times Core:
-![Alt text](demos/vectorized_half_cheetah/original/fmppo_transfer_3.png)
-
-PPO and Fm-PPO Agent post-training evaluation on new random environment for same running task as training:
-<div style="text-align: center;">
-  <img src="demos/vectorized_half_cheetah/eval/eval_vel1.png" alt="Alt text" width="650"/>
-</div>
