@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_5e6.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_test.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # prone_agent = ProneAgent(envs).to(device)

@@ -38,12 +38,11 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using SFm-PPO</blockquote>
           </div>
-        </div>
         <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
               <source src="../VNL-MVP/demos/ppo_5e6_nice.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
-          </div>
         </div>
+</div>
