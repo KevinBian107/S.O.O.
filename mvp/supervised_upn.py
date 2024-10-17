@@ -12,8 +12,8 @@ class Args:
     learning_rate: float = 3e-4
     batch_size: int = 64
     hidden_size: int = 64
-    latent_size: int = 100
-    num_epochs: int = 500
+    latent_size: int = 200
+    num_epochs: int = 300
     cuda: bool = True
 
 args = Args()
@@ -54,7 +54,7 @@ class UPN(nn.Module):
         next_state_recon = self.decoder(z_next)
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='mvp/data/imitation_data_half_cheetah_ppo_5e6.npz'):
+def load_data(file_path='mvp/data/imitation_data_pusher.npz'):
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
     actions = torch.FloatTensor(data['actions']).to(device)
@@ -184,7 +184,7 @@ def main():
     # Save the model
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
-    model_filename = "supervised_upn_100_10000_less_train.pth"
+    model_filename = "supervised_upn_pusher.pth"
     model_path = os.path.join(save_dir, model_filename)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")

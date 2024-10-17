@@ -162,3 +162,22 @@ class ActionMaskingWrapper(gym.Wrapper):
         if random.random() < self.mask_prob:
             action = np.zeros_like(action)  # Masked action
         return self.env.step(action)
+
+class NonLinearDynamicsWrapper(gym.ActionWrapper):
+    def __init__(self, env, dynamic_change_threshold=100):
+        super().__init__(env)
+        self.dynamic_change_threshold = dynamic_change_threshold
+        self.step_count = 0
+    
+    def step(self, action):
+        self.step_count += 1
+        
+        # Apply non-linear dynamics after the threshold
+        if self.step_count > self.dynamic_change_threshold:
+            # Randomly choose to multiply or divide the action
+            if random.random() > 0.5:
+                action = action * random.uniform(1.2, 2.0)  # Multiply by a random factor
+            else:
+                action = action / random.uniform(1.2, 2.0)  # Divide by a random factor
+        
+        return self.env.step(action)
