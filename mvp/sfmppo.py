@@ -45,8 +45,8 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    target_kl: float = 0.1
-    load_upn: str = "supervised_upn_100_10000_less_train.pth"
+    kl_coef: float = 0.1
+    load_upn: str = "supervised_upn_100.pth"
     mix_coord: bool = True # this helps greatly
 
     # to be set at runtime
@@ -385,9 +385,9 @@ if __name__ == "__main__":
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
                 
-                if args.target_kl is not None and approx_kl > args.target_kl:
-                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
-                    break
+                # if args.target_kl is not None and approx_kl > args.target_kl:
+                #     print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                #     break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
@@ -420,7 +420,7 @@ if __name__ == "__main__":
                 upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
                 upn_loss = upn_loss * args.upn_coef
                 
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef
+                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef + args.kl_coef * approx_kl
 
                 ppo_loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
                 
