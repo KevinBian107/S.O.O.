@@ -40,7 +40,7 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-MVP/pca_ppo.mov.mp4" type="video/mp4">
+              <source src="../VNL-MVP/pca_ppo.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using PPO Action Space PCA</blockquote>
@@ -48,7 +48,7 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-MVP/pca_sfmppo.mov.mp4" type="video/mp4">
+              <source src="../VNL-MVP/pca_sfmppo.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using SFMPPO Latent Space PCA</blockquote>
