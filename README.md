@@ -17,21 +17,21 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-MVP/demo1.mp4" type="video/mp4">
+              <source src="../VNL-MVP/demos/website/demo1.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Inverted Pendulum agent trained using Fm-PPO</blockquote>
           </div>
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-MVP/sfmppo_converge_712.mp4" type="video/mp4">
+              <source src="../VNL-MVP/demos/website/sfmppo_converge_712.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using SFm-PPO</blockquote>
           </div>
         <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-MVP/demos/ppo_5e6_nice.mp4" type="video/mp4">
+              <source src="../VNL-MVP/demos/website/ppo_5e6_nice.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
             <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
@@ -40,16 +40,16 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
   <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-              <video controls autoplay style="width: 80%; height: auto;" muted>
-                <source src="../VNL-MVP/pca_ppo.mp4" type="video/mp4">
+              <video controls autoplay style="width: 90%; height: auto;" muted>
+                <source src="../VNL-MVP/demos/website/pca_ppo.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
               <blockquote>Deep-RL Half Cheetah agent trained using PPO Action Space PCA</blockquote>
           </div>
 
   <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-              <video controls autoplay style="width: 80%; height: auto;" muted>
-                <source src="../VNL-MVP/pca_sfmppo.mp4" type="video/mp4">
+              <video controls autoplay style="width: 90%; height: auto;" muted>
+                <source src="../VNL-MVP/demos/website/pca_sfmppo.mp4" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
               <blockquote>Deep-RL Half Cheetah agent trained using SFMPPO Latent Space PCA</blockquote>
@@ -64,4 +64,4 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
   - Still on-going testing on checking backward transfer (memory stability)
 3. Latent representation analysis on-going.
 
-![Alt text](demos/dynamics_model.png)
+![Alt text](demos/website/dynamics_model.png)
