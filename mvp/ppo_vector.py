@@ -17,13 +17,13 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 
 @dataclass
 class Args:
-    exp_name: str = "ppo_halfcheetah" #"ppo_inverted_pendulum"
+    exp_name: str = "ppo_halfcheetah"#"ppo_walker" #"ppo_inverted_pendulum"
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
+    env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 1000000
+    total_timesteps: int = 2000000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -35,10 +35,10 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.0
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
+    kl_coef: float = 0.1
     max_grad_norm: float = 0.5
-    target_kl: float = None
     load_model: str = None #'ppo_vector.pth'
     
     # to be filled in runtime
@@ -270,7 +270,7 @@ if __name__ == "__main__":
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + args.kl_coef * approx_kl
 
                 optimizer.zero_grad()
                 loss.backward()

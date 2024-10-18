@@ -45,7 +45,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    kl_coef: float = 0.1
+    kl_coef: float = 0.3
     load_upn: str = "supervised_upn_100.pth"
     mix_coord: bool = True # this helps greatly
 
