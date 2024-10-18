@@ -23,7 +23,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 3000000
+    total_timesteps: int = 1000000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_hc.pth"
+    data_filename = f"ppo_vector_walker.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
