@@ -45,6 +45,7 @@ class Args:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
+    target_kl: float = 0.1
     load_upn: str = "supervised_upn_100_10000_less_train.pth"
     mix_coord: bool = True # this helps greatly
 
@@ -383,6 +384,10 @@ if __name__ == "__main__":
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+                
+                if args.target_kl is not None and approx_kl > args.target_kl:
+                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                    break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
