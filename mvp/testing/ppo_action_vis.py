@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from ppo_vector import Args, Agent as PPOAgent, make_env
+from mvp.ppo import Args, Agent as PPOAgent, make_env
 
 class ModifiedPPOAgent(PPOAgent):
     def get_state_representation(self, x):

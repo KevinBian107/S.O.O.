@@ -11,7 +11,7 @@ from gymnasium.wrappers import RecordVideo
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from ppo_vector import Args, Agent as PPOAgent, make_env
+from mvp.ppo import Args, Agent as PPOAgent, make_env
 
 class PPOLatentVisualizer:
     def __init__(self, agent, envs, device, method='pca', fig_size=(15, 5)):

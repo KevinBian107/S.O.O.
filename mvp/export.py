@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 import gymnasium as gym
-from ppo_vector import Agent, Args, make_env  # Import the Agent class, Args, and make_env from the training file
+from mvp.ppo import Agent, Args, make_env  # Import the Agent class, Args, and make_env from the training file
 
 # ensure env did not open noise
 target_steps = 10000

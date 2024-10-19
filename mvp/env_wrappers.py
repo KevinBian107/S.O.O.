@@ -181,3 +181,45 @@ class NonLinearDynamicsWrapper(gym.ActionWrapper):
                 action = action / random.uniform(1.2, 2.0)  # Divide by a random factor
         
         return self.env.step(action)
+
+class PenalizeLargeActionWrapper(gym.Wrapper):
+    def __init__(self, env, action_penalty_coeff=0.1):
+        super(PenalizeLargeActionWrapper, self).__init__(env)
+        self.action_penalty_coeff = action_penalty_coeff
+
+    def step(self, action):
+        # Step the environment
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        
+        # Calculate the penalty for large actions
+        action_penalty = self.action_penalty_coeff * np.sum(np.square(action))
+        
+        # Adjust the reward
+        modified_reward = reward - action_penalty
+        
+        return obs, modified_reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+class NoFlipWrapper(gym.Wrapper):
+    def __init__(self, env, flip_penalty=-10.0, max_torso_angle=1.0):
+        super(NoFlipWrapper, self).__init__(env)
+        self.flip_penalty = flip_penalty
+        self.max_torso_angle = max_torso_angle  # Maximum tilt angle (in radians) before applying a penalty
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        
+        # Assuming torso pitch (tilt) is at index 2 in the observation array
+        torso_pitch = obs[2]
+        
+        # Check if the torso pitch exceeds the maximum allowable angle (i.e., the agent is flipping)
+        if abs(torso_pitch) > self.max_torso_angle:
+            reward += self.flip_penalty  # Apply a penalty for flipping
+            terminated = True  # Optionally end the episode if the agent flips over
+        
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)

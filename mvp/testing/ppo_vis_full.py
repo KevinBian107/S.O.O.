@@ -8,54 +8,75 @@ import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from mvp.ppo import Args, Agent as PPOAgent, make_env
+from ppo import Args, Agent as PPOAgent, make_env
 
-class PPOActivationVisualizer:
-    def __init__(self, agent, envs, device, fig_size=(20, 5)):
+class FullPPOActivationVisualizer:
+    def __init__(self, agent, envs, device, method='pca', fig_size=(20, 10)):
         self.agent = agent
         self.envs = envs
         self.device = device
+        self.method = method
         self.fig_size = fig_size
         
         # Initialize visualization
         plt.ion()
         self.fig = plt.figure(figsize=self.fig_size)
         
-        # Create subplots: env view, actor activation space, action space
-        self.ax_env = self.fig.add_subplot(131)
-        self.ax_actor = self.fig.add_subplot(132)
-        self.ax_action = self.fig.add_subplot(133)
+        # Create subplots: env view, actor activation space, critic activation space, action space
+        self.ax_env = self.fig.add_subplot(231)
+        self.ax_actor = self.fig.add_subplot(232)
+        self.ax_critic = self.fig.add_subplot(233)
+        self.ax_action = self.fig.add_subplot(234)
         
-        # Initialize PCAs
+        # Initialize PCAs for all spaces
         self.actor_pca = PCA(n_components=2)
+        self.critic_pca = PCA(n_components=2)
         self.action_pca = PCA(n_components=2)
         
-        self.current_actor_trajectory = []
-        self.current_action_trajectory = []
-        self.actor_trajectory_line = None
-        self.action_trajectory_line = None
+        self.trajectories = {
+            'actor': [],
+            'critic': [],
+            'action': []
+        }
+        
+        self.trajectory_lines = {
+            'actor': None,
+            'critic': None,
+            'action': None
+        }
         
         # Get initial frame
         obs, _ = self.envs.reset()
         frame = self.envs.call('render')[0]
         self.frame_shape = frame.shape
 
-    def get_actor_activation(self, obs):
-        """Extract intermediate activation from the actor network"""
-        # Get activation from second-to-last layer
-        x = obs
-        for i, layer in enumerate(self.agent.actor_mean):
-            x = layer(x)
-            if i == len(self.agent.actor_mean) - 2:  # Second-to-last layer
-                return x
-        return x
-        
+    def get_network_activations(self, obs):
+        """Extract intermediate activations from actor and critic networks"""
+        with torch.no_grad():
+            # Actor activation
+            x = obs
+            for i, layer in enumerate(self.agent.actor_mean):
+                x = layer(x)
+                if i == len(self.agent.actor_mean) - 2:  # Second-to-last layer
+                    actor_hidden = x
+            
+            # Critic activation
+            critic_hidden = self.agent.critic[0](obs)
+            
+        return {
+            'actor': actor_hidden,
+            'critic': critic_hidden
+        }
+
     def collect_initial_representations(self, num_episodes=5):
-        """Collect initial actor and action representations"""
-        actor_activations = []
-        actions = []
-        episode_returns = []
-        episode_steps = []
+        """Collect initial actor, critic, and action representations"""
+        collections = {
+            'actor': [],
+            'critic': [],
+            'actions': [],
+            'returns': [],
+            'steps': []
+        }
         
         print("Collecting initial representations...")
         for episode in range(num_episodes):
@@ -67,13 +88,14 @@ class PPOActivationVisualizer:
             
             while not next_done.all():
                 with torch.no_grad():
-                    # Get actor's hidden activation
-                    actor_hidden = self.get_actor_activation(next_obs)
-                    actor_activations.append(actor_hidden.cpu().numpy())
+                    # Get actor and critic activations
+                    activations = self.get_network_activations(next_obs)
+                    for key, value in activations.items():
+                        collections[key].append(value.cpu().numpy())
                     
                     # Get action
                     action, _, _, _ = self.agent.get_action_and_value(next_obs)
-                    actions.append(action.cpu().numpy())
+                    collections['actions'].append(action.cpu().numpy())
                     
                     # Step environment
                     next_obs, reward, terminations, truncations, _ = self.envs.step(action.cpu().numpy())
@@ -83,68 +105,60 @@ class PPOActivationVisualizer:
                     step_count += 1
 
             print(f"Episode {episode + 1}/{num_episodes} completed with return: {episode_return.item()}")
-            episode_returns.append(episode_return.item())
-            episode_steps.append(step_count)
+            collections['returns'].append(episode_return.item())
+            collections['steps'].append(step_count)
         
-        return (np.vstack(actor_activations), np.vstack(actions), 
-                episode_returns, episode_steps)
+        return collections
 
     def setup_visualization(self):
         """Initialize visualization with collected data"""
-        (initial_actor_activations, initial_actions, 
-         episode_returns, episode_steps) = self.collect_initial_representations()
+        collections = self.collect_initial_representations()
         
-        self.reduced_actor = self.actor_pca.fit_transform(initial_actor_activations)
-        self.reduced_actions = self.action_pca.fit_transform(initial_actions)
+        # Fit PCAs
+        reduced_data = {
+            'actor': self.actor_pca.fit_transform(np.vstack(collections['actor'])),
+            'critic': self.critic_pca.fit_transform(np.vstack(collections['critic'])),
+            'action': self.action_pca.fit_transform(np.vstack(collections['actions']))
+        }
         
-        # Clear previous plots
-        self.ax_env.clear()
-        self.ax_actor.clear()
-        self.ax_action.clear()
+        # Clear all axes
+        for ax in [self.ax_env, self.ax_actor, self.ax_critic, self.ax_action]:
+            ax.clear()
         
-        # Plot background points for actor space
-        scatter_actor = self.ax_actor.scatter(
-            self.reduced_actor[:, 0], 
-            self.reduced_actor[:, 1], 
-            c=np.repeat(episode_returns, episode_steps), 
-            cmap='viridis', 
-            alpha=0.5
-        )
-        plt.colorbar(scatter_actor, ax=self.ax_actor, label='Episode Return')
+        # Create scatter plots for each space
+        axes_map = {
+            'actor': self.ax_actor,
+            'critic': self.ax_critic,
+            'action': self.ax_action
+        }
         
-        # Plot background points for action space
-        scatter_action = self.ax_action.scatter(
-            self.reduced_actions[:, 0], 
-            self.reduced_actions[:, 1], 
-            c=np.repeat(episode_returns, episode_steps), 
-            cmap='viridis', 
-            alpha=0.5
-        )
-        plt.colorbar(scatter_action, ax=self.ax_action, label='Episode Return')
+        self.current_points = {}
         
-        # Setup current points and trajectories
-        self.current_actor_point = self.ax_actor.scatter(
-            [], [], c='red', s=100, label='Current state'
-        )
-        self.current_action_point = self.ax_action.scatter(
-            [], [], c='red', s=100, label='Current state'
-        )
-        
-        self.actor_trajectory_line, = self.ax_actor.plot(
-            [], [], 'r-', alpha=0.5, linewidth=1
-        )
-        self.action_trajectory_line, = self.ax_action.plot(
-            [], [], 'r-', alpha=0.5, linewidth=1
-        )
-        
-        # Add explained variance ratio to titles
-        actor_var = self.actor_pca.explained_variance_ratio_
-        action_var = self.action_pca.explained_variance_ratio_
-        
-        self.ax_actor.set_title(f'Actor Activation Space\nVar: {actor_var[0]:.2f}, {actor_var[1]:.2f}')
-        self.ax_action.set_title(f'Action Space\nVar: {action_var[0]:.2f}, {action_var[1]:.2f}')
-        self.ax_actor.legend()
-        self.ax_action.legend()
+        for space, ax in axes_map.items():
+            # Background scatter
+            scatter = ax.scatter(
+                reduced_data[space][:, 0],
+                reduced_data[space][:, 1],
+                c=np.repeat(collections['returns'], collections['steps']),
+                cmap='viridis',
+                alpha=0.5
+            )
+            plt.colorbar(scatter, ax=ax, label='Episode Return')
+            
+            # Current point
+            self.current_points[space] = ax.scatter(
+                [], [], c='red', s=200, label='Current state'
+            )
+            
+            # Trajectory line
+            self.trajectory_lines[space], = ax.plot(
+                [], [], 'r-', alpha=0.5, linewidth=3
+            )
+            
+            # Add explained variance ratio to titles
+            var = getattr(self, f"{space}_pca").explained_variance_ratio_
+            ax.set_title(f'{space.capitalize()} Space\nVar: {var[0]:.2f}, {var[1]:.2f}')
+            ax.legend()
         
         # Initialize environment display
         self.env_image = self.ax_env.imshow(np.zeros(self.frame_shape))
@@ -154,35 +168,31 @@ class PPOActivationVisualizer:
         plt.tight_layout()
         self.fig.canvas.draw()
         print("Visualization setup completed")
-    
+
     def update_visualization(self, obs, episode_return):
         """Update visualizations with current state"""
         try:
             # Get current representations
             with torch.no_grad():
-                actor_hidden = self.get_actor_activation(torch.Tensor(obs).to(self.device))
+                activations = self.get_network_activations(torch.Tensor(obs).to(self.device))
                 action, _, _, _ = self.agent.get_action_and_value(torch.Tensor(obs).to(self.device))
                 
-                current_actor = self.actor_pca.transform(actor_hidden.cpu().numpy())
-                current_action = self.action_pca.transform(action.cpu().numpy())
+                current_points = {
+                    'actor': self.actor_pca.transform(activations['actor'].cpu().numpy()),
+                    'critic': self.critic_pca.transform(activations['critic'].cpu().numpy()),
+                    'action': self.action_pca.transform(action.cpu().numpy())
+                }
             
-            # Update current points
-            self.current_actor_point.set_offsets(current_actor)
-            self.current_action_point.set_offsets(current_action)
-            
-            # Update trajectories
-            self.current_actor_trajectory.append(current_actor[0])
-            self.current_action_trajectory.append(current_action[0])
-            
-            if len(self.current_actor_trajectory) > 1:
-                actor_trajectory = np.array(self.current_actor_trajectory)
-                action_trajectory = np.array(self.current_action_trajectory)
-                self.actor_trajectory_line.set_data(
-                    actor_trajectory[:, 0], actor_trajectory[:, 1]
-                )
-                self.action_trajectory_line.set_data(
-                    action_trajectory[:, 0], action_trajectory[:, 1]
-                )
+            # Update current points and trajectories
+            for space, point in current_points.items():
+                self.current_points[space].set_offsets(point)
+                self.trajectories[space].append(point[0])
+                
+                if len(self.trajectories[space]) > 1:
+                    trajectory = np.array(self.trajectories[space])
+                    self.trajectory_lines[space].set_data(
+                        trajectory[:, 0], trajectory[:, 1]
+                    )
             
             # Update environment rendering
             frame = self.envs.call('render')[0]
@@ -201,7 +211,7 @@ class PPOActivationVisualizer:
             print(f"Error in update_visualization: {e}")
             import traceback
             traceback.print_exc()
-    
+
     def run_episode(self):
         """Run episode with visualization"""
         next_obs, _ = self.envs.reset()
@@ -211,11 +221,10 @@ class PPOActivationVisualizer:
         step_count = 0
         
         print("Starting new episode...")
-        self.current_actor_trajectory = []
-        self.current_action_trajectory = []
+        self.trajectories = {key: [] for key in self.trajectories.keys()}
         
         while not next_done.all():
-            self.update_visualization(next_obs, episode_return.item())
+            self.update_visualization(next_obs.cpu().numpy(), episode_return.item())
             
             with torch.no_grad():
                 action, _, _, _ = self.agent.get_action_and_value(next_obs)
@@ -245,11 +254,11 @@ def main():
     print(f"Environment created: {args.env_id}")
     
     agent = PPOAgent(envs).to(device)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_5e6.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_hc_test.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     
-    visualizer = PPOActivationVisualizer(agent, envs, device)
+    visualizer = FullPPOActivationVisualizer(agent, envs, device)
     visualizer.setup_visualization()
     
     num_episodes = 5

@@ -11,7 +11,7 @@ from torch.distributions import Normal
 import torch.nn as nn
 from sfmppo import Args, Agent as SFMPPOAgent, make_env
 from fmppo_vector_prone import Agent as ProneAgent
-from ppo_vector import Agent as PPOAgent
+from mvp.ppo import Agent as PPOAgent
 import random
 
 def evaluate_model(agent, envs, device, num_episodes=100):

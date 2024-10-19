@@ -13,7 +13,8 @@ from torch.distributions.normal import Normal
 import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
 from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewardWrapper, MultiTimescaleWrapper, 
-                          NoisyObservationWrapper, PartialObservabilityWrapper, MultiStepTaskWrapper, ActionMaskingWrapper)
+                          NoisyObservationWrapper, PartialObservabilityWrapper, MultiStepTaskWrapper, ActionMaskingWrapper,
+                          PenalizeLargeActionWrapper, NoFlipWrapper)
 
 @dataclass
 class Args:
@@ -23,7 +24,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 2000000
+    total_timesteps: int = 500000
     learning_rate: float = 3e-4
     num_envs: int = 1
     num_steps: int = 2048
@@ -33,12 +34,13 @@ class Args:
     num_minibatches: int = 32
     update_epochs: int = 10
     norm_adv: bool = True
-    clip_coef: float = 0.2
+    clip_coef: float = 0.1
     clip_vloss: bool = True
-    ent_coef: float = 0.01
+    ent_coef: float = 0.0
     vf_coef: float = 0.5
-    kl_coef: float = 0.1
+    kl_coef: float = 0.3
     max_grad_norm: float = 0.5
+    action_reg_coef: float = 0.01
     load_model: str = None #'ppo_vector.pth'
     
     # to be filled in runtime
@@ -62,7 +64,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = DelayedRewardWrapper(env, delay_steps=50)
         # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
         # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
-        # env = NoisyObservationWrapper(env, noise_scale=0.1)
+        # env = NoisyObservationWrapper(env=env, noise_scale=0.1)
+        # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -254,6 +257,10 @@ if __name__ == "__main__":
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
+                # Add action regularization term
+                action_regularization = (b_actions[mb_inds] ** 2).mean()  # Penalize large actions
+                pg_loss += args.action_reg_coef * action_regularization
+
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if args.clip_vloss:
@@ -371,7 +378,7 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_vector_walker.pth"
+    data_filename = f"ppo_hc_test.pth"
     data_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
