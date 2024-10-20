@@ -24,7 +24,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 300000
+    total_timesteps: int = 5000000
     learning_rate: float = 8e-5
     num_envs: int = 1
     num_steps: int = 2048
@@ -36,14 +36,14 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.00
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
     kl_coef: float = 0.1
     target_kl: float = 0.01 #  the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = 'ppo_hc_test.pth'
-    
+    load_model: str = None #'ppo_hc_test.pth'
+
     # to be filled in runtime
     batch_size: int = 0
     minibatch_size: int = 0

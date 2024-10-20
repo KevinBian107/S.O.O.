@@ -60,26 +60,64 @@ class EnhancedActivationVisualizer:
         frame = self.envs.call('render')[0]
         self.frame_shape = frame.shape
 
+    # def get_network_activations(self, z, action=None, next_z=None):
+    #     """Extract intermediate activations from all networks"""
+    #     with torch.no_grad():
+    #         # Actor activation
+    #         actor_hidden = self.agent.actor_mean[0](z)
+            
+    #         # Critic activation
+    #         critic_hidden = self.agent.critic[0](z)
+            
+    #         # Forward model activation (if action and next_z available)
+    #         if action is not None and next_z is not None:
+    #             forward_input = torch.cat([z, action], dim=-1)
+    #             forward_hidden = self.agent.upn.dynamics[0](forward_input)
+    #         else:
+    #             forward_hidden = torch.zeros_like(actor_hidden)
+            
+    #         # Inverse model activation (if next_z available)
+    #         if next_z is not None:
+    #             inverse_input = torch.cat([z, next_z], dim=-1)
+    #             inverse_hidden = self.agent.upn.inverse_dynamics[0](inverse_input)
+    #         else:
+    #             inverse_hidden = torch.zeros_like(actor_hidden)
+            
+    #     return {
+    #         'actor': actor_hidden,
+    #         'critic': critic_hidden,
+    #         'forward': forward_hidden,
+    #         'inverse': inverse_hidden
+    #     }
+
     def get_network_activations(self, z, action=None, next_z=None):
-        """Extract intermediate activations from all networks"""
+        """Extract intermediate activations from all networks, need to do padding if needed"""
         with torch.no_grad():
-            # Actor activation
+            # Actor activation (256-dim)
             actor_hidden = self.agent.actor_mean[0](z)
             
-            # Critic activation
+            # Critic activation (256-dim)
             critic_hidden = self.agent.critic[0](z)
             
-            # Forward model activation (if action and next_z available)
+            # Forward model activation (64-dim)
             if action is not None and next_z is not None:
                 forward_input = torch.cat([z, action], dim=-1)
                 forward_hidden = self.agent.upn.dynamics[0](forward_input)
+                # Pad forward hidden to match actor dimensions
+                padding_size = actor_hidden.shape[-1] - forward_hidden.shape[-1]
+                if padding_size > 0:
+                    forward_hidden = torch.nn.functional.pad(forward_hidden, (0, padding_size))
             else:
                 forward_hidden = torch.zeros_like(actor_hidden)
             
-            # Inverse model activation (if next_z available)
+            # Inverse model activation (64-dim)
             if next_z is not None:
                 inverse_input = torch.cat([z, next_z], dim=-1)
                 inverse_hidden = self.agent.upn.inverse_dynamics[0](inverse_input)
+                # Pad inverse hidden to match actor dimensions
+                padding_size = actor_hidden.shape[-1] - inverse_hidden.shape[-1]
+                if padding_size > 0:
+                    inverse_hidden = torch.nn.functional.pad(inverse_hidden, (0, padding_size))
             else:
                 inverse_hidden = torch.zeros_like(actor_hidden)
             
@@ -158,12 +196,29 @@ class EnhancedActivationVisualizer:
         collections = self.collect_initial_representations()
         
         # Fit PCAs
+        # reduced_data = {
+        #     'latent': self.latent_pca.fit_transform(np.vstack(collections['latents'])),
+        #     'actor': self.actor_pca.fit_transform(np.vstack(collections['actor'])),
+        #     'critic': self.critic_pca.fit_transform(np.vstack(collections['critic'])),
+        #     'forward': self.forward_pca.fit_transform(np.vstack(collections['forward'])),
+        #     'inverse': self.inverse_pca.fit_transform(np.vstack(collections['inverse']))
+        # }
+
+        # Fit each PCA separately on the respective data
+
+        self.latent_pca.fit(np.vstack(collections['latents']))
+        self.actor_pca.fit(np.vstack(collections['actor']))
+        self.critic_pca.fit(np.vstack(collections['critic']))
+        self.forward_pca.fit(np.vstack(collections['forward']))  # Forward data should be 64-dim
+        self.inverse_pca.fit(np.vstack(collections['inverse']))  # Inverse data should be 64-dim
+        
+        # Reduce dimensions for visualization
         reduced_data = {
-            'latent': self.latent_pca.fit_transform(np.vstack(collections['latents'])),
-            'actor': self.actor_pca.fit_transform(np.vstack(collections['actor'])),
-            'critic': self.critic_pca.fit_transform(np.vstack(collections['critic'])),
-            'forward': self.forward_pca.fit_transform(np.vstack(collections['forward'])),
-            'inverse': self.inverse_pca.fit_transform(np.vstack(collections['inverse']))
+            'latent': self.latent_pca.transform(np.vstack(collections['latents'])),
+            'actor': self.actor_pca.transform(np.vstack(collections['actor'])),
+            'critic': self.critic_pca.transform(np.vstack(collections['critic'])),
+            'forward': self.forward_pca.transform(np.vstack(collections['forward'])),
+            'inverse': self.inverse_pca.transform(np.vstack(collections['inverse']))
         }
         
         # Clear all axes
@@ -336,6 +391,7 @@ def main():
     print(f"Environment created: {args.env_id}")
     
     agent = SFMPPOAgent(envs).to(device)
+    print(agent)
     model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_hc_test.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")

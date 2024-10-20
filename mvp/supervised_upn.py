@@ -6,14 +6,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 
-# ensure data is correct, is all in the data
+# ensure data is correct, is all in the data, must use consistent non stop data
 class Args:
     total_timesteps: int = 1000000
-    learning_rate: float = 3e-4
+    learning_rate: float = 8e-5
     batch_size: int = 64
     hidden_size: int = 64
-    latent_size: int = 200
-    num_epochs: int = 300
+    latent_size: int = 100
+    num_epochs: int = 1000
     cuda: bool = True
 
 args = Args()
@@ -54,7 +54,7 @@ class UPN(nn.Module):
         next_state_recon = self.decoder(z_next)
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='mvp/data/imitation_data_pusher.npz'):
+def load_data(file_path='mvp/data/imitation_data_ppo_well_trained.npz'):
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
     actions = torch.FloatTensor(data['actions']).to(device)
@@ -184,7 +184,7 @@ def main():
     # Save the model
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
-    model_filename = "supervised_upn_pusher.pth"
+    model_filename = "supervised_upn_well_trained_ppo.pth"
     model_path = os.path.join(save_dir, model_filename)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")

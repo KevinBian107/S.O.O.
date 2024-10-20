@@ -19,11 +19,13 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
                           NoisyObservationWrapper, MultiStepTaskWrapper, PartialObservabilityWrapper, ActionMaskingWrapper,
                           NonLinearDynamicsWrapper)
 
+# need good data/consistent data in imitation learning process
+
 @dataclass
 class Args:
     exp_name: str = "fmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    total_timesteps: int = 1000000
+    total_timesteps: int = 2000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -41,12 +43,13 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.0
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    kl_coef: float = 0.3
-    load_upn: str = "supervised_upn_100.pth"
+    kl_coef: float = 0.1
+    target_kl: float = 0.01
+    load_upn: str = "supervised_upn_well_trained_ppo.pth" #"supervised_upn_100.pth"
     mix_coord: bool = True # this helps greatly
 
     # to be set at runtime
@@ -90,6 +93,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 class UPN(nn.Module):
+    '''Mismatch would have some problem'''
     def __init__(self, state_dim, action_dim, latent_dim):
         super(UPN, self).__init__()
         self.encoder = nn.Sequential(
@@ -132,18 +136,18 @@ class Agent(nn.Module):
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(latent_dim, 64)),
+            layer_init(nn.Linear(latent_dim, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
+            layer_init(nn.Linear(256, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(latent_dim, 64)),
+            layer_init(nn.Linear(latent_dim, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, action_dim), std=0.01),
+            layer_init(nn.Linear(256, action_dim), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, action_dim))
 
@@ -385,9 +389,9 @@ if __name__ == "__main__":
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
                 
-                # if args.target_kl is not None and approx_kl > args.target_kl:
-                #     print(f"Early stopping at iteration {iteration} due to reaching target KL.")
-                #     break
+                if args.target_kl is not None and approx_kl > args.target_kl:
+                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                    break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
@@ -549,10 +553,10 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"sfmppo_hc_test.pth"
+    data_filename = f"sfmppo_hc_test_2.pth"
     data_path = os.path.join(save_dir, data_filename)
 
-    data_filename = f"sfm_hc_test.pth"
+    data_filename = f"sfm_hc_test_2.pth"
     data2_path = os.path.join(save_dir, data_filename)
 
     print('Saved at: ', data_path)
