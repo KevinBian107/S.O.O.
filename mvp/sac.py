@@ -23,7 +23,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
-    total_timesteps: int = 1000000
+    total_timesteps: int = 500000
     buffer_size: int = int(1e6)
     gamma: float = 0.99
     tau: float = 0.005
@@ -298,4 +298,3 @@ if __name__ == "__main__":
         'qf2_target': qf2_target.state_dict()
     }, data_path)
     print('Saved at: ', data_path)
-    torch.save(agent.state_dict(), data_path)

@@ -24,8 +24,8 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
-    total_timesteps: int = 500000
-    learning_rate: float = 1e-4
+    total_timesteps: int = 1500000
+    learning_rate: float = 8e-5
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
@@ -36,9 +36,10 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.02
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
     kl_coef: float = 0.1
+    target_kl: float = 0.01 #  the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
     load_model: str = None #'ppo_vector.pth'
@@ -248,6 +249,10 @@ if __name__ == "__main__":
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+                
+                if args.target_kl is not None and approx_kl > args.target_kl:
+                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                    break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
