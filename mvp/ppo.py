@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
 from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewardWrapper, MultiTimescaleWrapper, 
                           NoisyObservationWrapper, PartialObservabilityWrapper, MultiStepTaskWrapper, ActionMaskingWrapper,
-                          PenalizeLargeActionWrapper, NoFlipWrapper)
+                          PenalizeLargeActionWrapper, NoFlipWrapper, StabilityWrapper)
 
 @dataclass
 class Args:
@@ -25,22 +25,22 @@ class Args:
     env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
     capture_video: bool = True
     total_timesteps: int = 500000
-    learning_rate: float = 3e-4
+    learning_rate: float = 1e-4
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
     num_minibatches: int = 32
-    update_epochs: int = 10
+    update_epochs: int = 15
     norm_adv: bool = True
-    clip_coef: float = 0.1
+    clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.0
+    ent_coef: float = 0.02
     vf_coef: float = 0.5
-    kl_coef: float = 0.3
+    kl_coef: float = 0.1
     max_grad_norm: float = 0.5
-    action_reg_coef: float = 0.01
+    action_reg_coef: float = 0.0
     load_model: str = None #'ppo_vector.pth'
     
     # to be filled in runtime
@@ -66,6 +66,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
         # env = NoisyObservationWrapper(env=env, noise_scale=0.1)
         # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
+        # env = StabilityWrapper(env=env, torso_height_range=(0.5, 1.5), orientation_penalty_scale=1.0)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -86,18 +87,18 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
+            layer_init(nn.Linear(256, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
+            layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
+            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 

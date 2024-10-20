@@ -223,3 +223,43 @@ class NoFlipWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
+    
+# Add this to your env_wrappers.py file
+
+import numpy as np
+import gymnasium as gym
+
+class StabilityWrapper(gym.Wrapper):
+    """Wrapper to encourage stable, upright locomotion."""
+    def __init__(self, env, torso_height_range=(0.5, 1.5), orientation_penalty_scale=1.0):
+        super().__init__(env)
+        self.torso_height_range = torso_height_range
+        self.orientation_penalty_scale = orientation_penalty_scale
+        
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        
+        # Get torso height and orientation (z-axis rotation) from state
+        # HalfCheetah state space: [x_torso, z_torso, theta_torso, ...other joints...]
+        torso_height = observation[1]  # z coordinate of torso
+        torso_angle = observation[2]   # rotation of torso
+        
+        # Penalize if torso height is outside desired range
+        height_penalty = 0
+        if torso_height < self.torso_height_range[0] or torso_height > self.torso_height_range[1]:
+            height_penalty = -1.0
+            
+        # Penalize extreme rotations (being upside down)
+        # torso_angle is in radians, we want to penalize rotations > 45 degrees
+        orientation_penalty = -abs(torso_angle) if abs(torso_angle) > np.pi/4 else 0
+        orientation_penalty *= self.orientation_penalty_scale
+        
+        # Modify reward
+        modified_reward = reward + height_penalty + orientation_penalty
+        
+        # Add early termination for extreme cases
+        if abs(torso_angle) > np.pi/2:  # terminate if rotation > 90 degrees
+            terminated = True
+            modified_reward -= 10  # Additional penalty for termination
+            
+        return observation, modified_reward, terminated, truncated, info
