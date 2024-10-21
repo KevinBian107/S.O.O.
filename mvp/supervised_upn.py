@@ -11,7 +11,7 @@ class Args:
     total_timesteps: int = 1000000
     learning_rate: float = 8e-5
     batch_size: int = 64
-    hidden_size: int = 64
+    hidden_size: int = 256
     latent_size: int = 100
     num_epochs: int = 1000
     cuda: bool = True

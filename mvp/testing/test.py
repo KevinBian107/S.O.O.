@@ -11,7 +11,7 @@ from torch.distributions import Normal
 import torch.nn as nn
 from sfmppo import Args, Agent as SFMPPOAgent, make_env
 from fmppo_vector_prone import Agent as ProneAgent
-from mvp.ppo import Agent as PPOAgent
+from ppo import Agent as PPOAgent
 import random
 
 def evaluate_model(agent, envs, device, num_episodes=100):
@@ -54,19 +54,19 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
-    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_test.pth")
+    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_hc_test_2.pth")
     sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector_5e6.pth")
+    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_hc_test.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # prone_agent = ProneAgent(envs).to(device)
     # prone_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_prone.pth")
     # prone_agent.load_state_dict(torch.load(prone_path, map_location=device))
 
-    episode_num = 300
+    episode_num = 50
     sfmppo_returns = evaluate_model(sfmppo_agent, envs, device, num_episodes=episode_num)
     # prone_returns = evaluate_model(prone_agent, envs, device, num_episodes=episode_num)
     ppo_returns = evaluate_model(ppo_agent, envs, device, num_episodes=episode_num)
@@ -75,8 +75,8 @@ if __name__ == "__main__":
     plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="SFM-PPO", marker='o')
     # plt.plot(range(1, len(prone_returns)+1), prone_returns, label="Prone FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    plt.title("Episode Returns for PPO & SFM-PPO On 0.8 PA/POMDP, Change of Dynamics")
-    # plt.title("Episode Returns for PPO & SFM-PPO On Standard Half-Cheetah Env")
+    # plt.title("Episode Returns for PPO & SFM-PPO On 0.8 PA/POMDP, Change of Dynamics")
+    plt.title("Episode Returns for PPO & SFM-PPO On Standard Half-Cheetah Env")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()

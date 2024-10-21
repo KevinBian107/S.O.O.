@@ -25,14 +25,16 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 class Args:
     exp_name: str = "fmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    total_timesteps: int = 2000000
+    total_timesteps: int = 3000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
-    ppo_learning_rate: float = 3e-4
+    ppo_learning_rate: float = 1e-4
     upn_learning_rate: float = 8e-5 # lower learning rate
     latent_size: int = 100
+    upn_hidden_layer: int = 256
+    ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
@@ -49,8 +51,12 @@ class Args:
     upn_coef: float = 0.8
     kl_coef: float = 0.1
     target_kl: float = 0.01
-    load_upn: str = "supervised_upn_well_trained_ppo.pth" #"supervised_upn_100.pth"
     mix_coord: bool = True # this helps greatly
+    
+    load_upn: str = "supervised_upn_well_trained_ppo.pth" #"supervised_upn_100.pth"
+    imitation_data_path: str= "imitation_data_ppo_well_trained.npz" # data need to match up
+    save_sfm: str = "sfm_hc_test_2.pth"
+    save_sfmppo: str = "sfmppo_hc_test_2.pth"
 
     # to be set at runtime
     batch_size: int = 0 
@@ -97,24 +103,24 @@ class UPN(nn.Module):
     def __init__(self, state_dim, action_dim, latent_dim):
         super(UPN, self).__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(state_dim, 64),
+            nn.Linear(state_dim, args.upn_hidden_layer),
             nn.ReLU(),
-            nn.Linear(64, latent_dim)
+            nn.Linear(args.upn_hidden_layer, latent_dim)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 64),
+            nn.Linear(latent_dim, args.upn_hidden_layer),
             nn.ReLU(),
-            nn.Linear(64, state_dim)
+            nn.Linear(args.upn_hidden_layer, state_dim)
         )
         self.dynamics = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, 64),
+            nn.Linear(latent_dim + action_dim, args.upn_hidden_layer),
             nn.ReLU(),
-            nn.Linear(64, latent_dim)
+            nn.Linear(args.upn_hidden_layer, latent_dim)
         )
         self.inverse_dynamics = nn.Sequential(
-            nn.Linear(latent_dim * 2, 64),
+            nn.Linear(latent_dim * 2, args.upn_hidden_layer),
             nn.ReLU(),
-            nn.Linear(64, action_dim)
+            nn.Linear(args.upn_hidden_layer, action_dim)
         )
 
     def forward(self, state, action, next_state):
@@ -136,18 +142,18 @@ class Agent(nn.Module):
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(latent_dim, 256)),
+            layer_init(nn.Linear(latent_dim, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
+            layer_init(nn.Linear(args.ppo_hidden_layer, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 1), std=1.0),
+            layer_init(nn.Linear(args.ppo_hidden_layer, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(latent_dim, 256)),
+            layer_init(nn.Linear(latent_dim, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
+            layer_init(nn.Linear(args.ppo_hidden_layer, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, action_dim), std=0.01),
+            layer_init(nn.Linear(args.ppo_hidden_layer, action_dim), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, action_dim))
 
@@ -188,11 +194,14 @@ def compute_upn_loss(upn, state, action, next_state):
 
     return recon_loss, forward_loss, inverse_loss, consistency_loss
 
-def mixed_batch(ppo_states, ppo_actions, ppo_next_states, imitation_data_path='mvp/data/imitation_data_half_cheetah_ppo_5e6.npz'):
+def mixed_batch(ppo_states, ppo_actions, ppo_next_states):
     '''3D: sample_size, env_dim, Dof_dim, no sample, concatination direclty'''
 
     # Load imitation data
-    imitation_data = np.load(imitation_data_path)
+    save_dir = os.path.join(os.getcwd(), 'mvp', 'data')
+    os.makedirs(save_dir, exist_ok=True)
+    data_path = os.path.join(save_dir, args.imitation_data_path)
+    imitation_data = np.load(data_path)
     imitation_states = torch.FloatTensor(imitation_data['states']).to(device)
     imitation_actions = torch.FloatTensor(imitation_data['actions']).to(device)
     imitation_next_states = torch.FloatTensor(imitation_data['next_states']).to(device)
@@ -553,14 +562,11 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
-    data_filename = f"sfmppo_hc_test_2.pth"
-    data_path = os.path.join(save_dir, data_filename)
+    data1_path = os.path.join(save_dir, args.save_sfmppo)
+    data2_path = os.path.join(save_dir, args.save_sfm)
 
-    data_filename = f"sfm_hc_test_2.pth"
-    data2_path = os.path.join(save_dir, data_filename)
-
-    print('Saved at: ', data_path)
-    torch.save(agent.state_dict(), data_path)
+    print('Saved at: ', data1_path)
+    torch.save(agent.state_dict(), data1_path)
 
     print('Saved at: ', data2_path)
     torch.save(agent.upn.state_dict(), data2_path)
