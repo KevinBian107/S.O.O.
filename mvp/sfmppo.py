@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
 from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewardWrapper, MultiTimescaleWrapper, 
                           NoisyObservationWrapper, MultiStepTaskWrapper, PartialObservabilityWrapper, ActionMaskingWrapper,
-                          NonLinearDynamicsWrapper)
+                          NonLinearDynamicsWrapper, DelayedHalfCheetahEnv)
 
 # need good data/consistent data in imitation learning process
 @dataclass
@@ -55,7 +55,9 @@ class Args:
     mix_coord: bool = True
     
     # Data need to match up, this data may be problematic
-    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
+    load_upn: str = None #"supervised_upn_new.pth" #"good/supervised_upn_good.pth"
+    load_sfmppo: str = "sfmppo/sfmppo_stable.pth"
+
     imitation_data_path: str= "imitation_data_ppo_new.npz"
     save_sfm: str = "sfm/sfm_new.pth"
     save_sfmppo: str = "sfmppo/sfmppo_new.pth"
@@ -84,6 +86,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -266,14 +269,25 @@ if __name__ == "__main__":
     agent = Agent(envs).to(device)
 
     if args.load_upn is not None:
-        # Define the path to save and load UPN weights
-        print('loaded params for forward model')
-        model_dir = os.path.join(os.getcwd(), 'mvp', 'params')
-        os.makedirs(model_dir, exist_ok=True)
-        load_path = os.path.join(model_dir, args.load_upn)
-
-        # Attempt to load UPN weights
-        agent.load_upn(load_path)
+        if args.load_sfmppo is not None:
+            print('Loading Full model, cannot load sfm core')
+        else:
+            # Define the path to save and load UPN weights
+            print('loaded params for supervised forward model')
+            model_dir = os.path.join(os.getcwd(), 'mvp', 'params')
+            os.makedirs(model_dir, exist_ok=True)
+            load_path = os.path.join(model_dir, args.load_upn)
+            # Attempt to load UPN weights
+            agent.load_upn(load_path)
+    
+    if args.load_sfmppo is not None:
+        save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+        data_path = os.path.join(save_dir, args.load_sfmppo)
+        if os.path.exists(data_path):
+            print(f"Loading sfmppo model from {data_path}")
+            agent.load_state_dict(torch.load(data_path, map_location=device))
+        else:
+            print(f"Model file not found at {data_path}. Starting training from scratch.")
 
     # Optimizer for PPO (actor and critic)
     ppo_optimizer = optim.Adam([
@@ -559,7 +573,7 @@ if __name__ == "__main__":
     plt.ylabel('Variance')
 
     plt.tight_layout()
-    plt.savefig('fmppo_results.png')
+    plt.savefig('sfmppo_results.png')
     plt.show()
 
     # Save the model

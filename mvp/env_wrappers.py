@@ -8,6 +8,7 @@ import torch.nn as nn
 from collections import deque
 import random
 
+## All wrappers for env modification
 
 class TargetVelocityWrapper(gym.Wrapper):
     def __init__(self, env, target_velocity=2.0, tolerance=0.5):
@@ -263,3 +264,94 @@ class StabilityWrapper(gym.Wrapper):
             modified_reward -= 10  # Additional penalty for termination
             
         return observation, modified_reward, terminated, truncated, info
+    
+import gym
+import numpy as np
+from collections import deque
+from typing import Dict, Tuple, Optional, Any
+
+class DelayedHalfCheetahEnv(gym.Wrapper):
+    """
+    A wrapper for the Half-Cheetah environment that introduces realistic sensory delays.
+    The Half-Cheetah observation space consists of:
+    - Proprioception (joint angles, velocities): ~20-40ms delay
+    - Force/contact sensors: ~40-60ms delay
+    """
+    def __init__(
+        self,
+        env: gym.Env,
+        proprio_delay: int = 2,  # 20ms at 100Hz
+        force_delay: int = 5,    # 50ms at 100Hz
+    ):
+        super().__init__(env)
+        self.proprio_delay = proprio_delay
+        self.force_delay = force_delay
+        
+        # Initialize buffers for different sensor types
+        self.proprio_buffer = deque(maxlen=proprio_delay + 1)
+        self.force_buffer = deque(maxlen=force_delay + 1)
+        
+        # Half-Cheetah observation space indices:
+        # [0:8] - positions (proprioception)
+        # [8:17] - velocities (proprioception)
+        # [17:] - external forces/contact forces
+        self.proprio_indices = list(range(0, 17))
+        self.force_indices = list(range(17, self.env.observation_space.shape[0]))
+        
+    def _get_delayed_obs(self, observation: np.ndarray) -> np.ndarray:
+        """
+        Returns an observation with appropriate delays for each sensor type.
+        """
+        delayed_obs = observation.copy()
+        
+        # Get delayed proprioceptive feedback
+        if len(self.proprio_buffer) == self.proprio_delay + 1:
+            delayed_obs[self.proprio_indices] = self.proprio_buffer[0][self.proprio_indices]
+        
+        # Get delayed force feedback
+        if len(self.force_buffer) == self.force_delay + 1:
+            delayed_obs[self.force_indices] = self.force_buffer[0][self.force_indices]
+            
+        return delayed_obs
+    
+    def reset(self, **kwargs) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Resets the environment and initializes the delay buffers.
+        Handles the new Gymnasium API that returns (obs, info).
+        """
+        observation, info = self.env.reset(**kwargs)
+        
+        # Clear and initialize all buffers with initial observation
+        self.proprio_buffer.clear()
+        self.force_buffer.clear()
+        
+        for _ in range(max(self.proprio_delay, self.force_delay) + 1):
+            self.proprio_buffer.append(observation)
+            self.force_buffer.append(observation)
+            
+        delayed_obs = self._get_delayed_obs(observation)
+        return delayed_obs, info
+    
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+        """
+        Takes a step in the environment while maintaining sensory delays.
+        Handles the new Gymnasium API that returns (obs, reward, terminated, truncated, info).
+        """
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        
+        # Update delay buffers
+        self.proprio_buffer.append(observation)
+        self.force_buffer.append(observation)
+        
+        delayed_obs = self._get_delayed_obs(observation)
+        
+        return delayed_obs, reward, terminated, truncated, info
+
+    def get_delay_info(self) -> Dict[str, int]:
+        """
+        Returns the current delay settings for each sensor type.
+        """
+        return {
+            "proprioception_delay_ms": self.proprio_delay * 10,  # Assuming 100Hz
+            "force_delay_ms": self.force_delay * 10
+        }
