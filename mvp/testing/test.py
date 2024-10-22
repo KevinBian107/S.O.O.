@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
-    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_hc_test_2.pth")
+    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_well_trained.pth")
     sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model

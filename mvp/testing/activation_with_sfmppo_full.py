@@ -392,7 +392,7 @@ def main():
     
     agent = SFMPPOAgent(envs).to(device)
     print(agent)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_hc_test.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_well_trained.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     

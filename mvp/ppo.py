@@ -18,36 +18,40 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 
 @dataclass
 class Args:
-    exp_name: str = "ppo_halfcheetah"#"ppo_walker" #"ppo_inverted_pendulum"
+    exp_name: str = "ppo_halfcheetah"
     seed: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
-    env_id: str = "HalfCheetah-v4"#"Walker2d-v4" #"InvertedPendulum-v4"
+    env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
-    total_timesteps: int = 5000000
+    total_timesteps: int = 3000000
     learning_rate: float = 8e-5
+    ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
-    num_minibatches: int = 32
-    update_epochs: int = 15
+    num_minibatches: int = 64
+    update_epochs: int = 20
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
     ent_coef: float = 0.01
     vf_coef: float = 0.5
     kl_coef: float = 0.1
-    target_kl: float = 0.01 #  the targeted KL does work well
+    target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = None #'ppo_hc_test.pth'
+    load_model: str = None
+    save_path: str = "ppo/ppo_hc_new.pth"
 
     # to be filled in runtime
     batch_size: int = 0
     minibatch_size: int = 0
     num_iterations: int = 0
+
+args = Args()
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
@@ -88,18 +92,18 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
+            layer_init(nn.Linear(args.ppo_hidden_layer, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 1), std=1.0),
+            layer_init(nn.Linear(args.ppo_hidden_layer, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
+            layer_init(nn.Linear(args.ppo_hidden_layer, args.ppo_hidden_layer)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01),
+            layer_init(nn.Linear(args.ppo_hidden_layer, np.prod(envs.single_action_space.shape)), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
@@ -116,7 +120,6 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 if __name__ == "__main__":
-    args = Args()
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -375,7 +378,6 @@ if __name__ == "__main__":
     plt.savefig('ppo_results.png')
     plt.show()
 
-    # Save the model
     save_dir = os.path.join(os.getcwd(),'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
@@ -384,8 +386,6 @@ if __name__ == "__main__":
     run_numbers = [int(re.search(r'run_(\d+)', f).group(1)) for f in existing_files if re.search(r'run_(\d+)', f)]
     run_number = max(run_numbers) + 1 if run_numbers else 1
 
-    data_filename = f"ppo_hc_test.pth"
-    data_path = os.path.join(save_dir, data_filename)
-
+    data_path = os.path.join(save_dir, args.save_path)
     print('Saved at: ', data_path)
     torch.save(agent.state_dict(), data_path)

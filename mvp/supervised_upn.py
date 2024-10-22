@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 # ensure data is correct, is all in the data, must use consistent non stop data
 class Args:
     total_timesteps: int = 1000000
-    learning_rate: float = 8e-5
+    learning_rate: float = 3e-4
     batch_size: int = 64
-    hidden_size: int = 256
+    hidden_size: int = 64
     latent_size: int = 100
-    num_epochs: int = 1000
+    num_epochs: int = 200
     cuda: bool = True
 
 args = Args()
@@ -41,6 +41,8 @@ class UPN(nn.Module):
         self.inverse_dynamics = nn.Sequential(
             nn.Linear(latent_dim * 2, args.hidden_size),
             nn.ReLU(),
+            nn.Linear(args.hidden_size, args.hidden_size),
+            nn.ReLU(),
             nn.Linear(args.hidden_size, action_dim)
         )
 
@@ -54,11 +56,16 @@ class UPN(nn.Module):
         next_state_recon = self.decoder(z_next)
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='mvp/data/imitation_data_ppo_well_trained.npz'):
+def load_data(file_path='mvp/data/imitation_data_ppo_new.npz'):
+    '''Ned to normalize the input'''
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
     actions = torch.FloatTensor(data['actions']).to(device)
     next_states = torch.FloatTensor(data['next_states']).to(device)
+
+    states = (states - states.mean()) / (states.std() + 1e-8)
+    actions = (actions - actions.mean()) / (actions.std() + 1e-8)
+
     return states, actions, next_states
 
 def compute_upn_loss(upn, state, action, next_state):
@@ -74,6 +81,9 @@ def compute_upn_loss(upn, state, action, next_state):
 
     latent_regularization = torch.mean(torch.norm(z, p=2, dim=-1)) + torch.mean(torch.norm(z_next, p=2, dim=-1))
     total_loss += 0.01 * latent_regularization
+
+    l2_penalty = torch.mean(torch.norm(action_pred, p=2, dim=-1))
+    total_loss += inverse_loss + 0.01 * l2_penalty
 
     return total_loss, recon_loss, forward_loss, inverse_loss, consistency_loss
 
@@ -129,7 +139,7 @@ def plot_losses(train_losses, val_losses):
         plt.ylabel('Loss')
         plt.legend()
     plt.tight_layout()
-    plt.savefig('supervised_upn_learning_losses.png')
+    plt.savefig('supervised_upn.png')
     plt.show()
 
 def main():
@@ -184,7 +194,7 @@ def main():
     # Save the model
     save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
     os.makedirs(save_dir, exist_ok=True)
-    model_filename = "supervised_upn_well_trained_ppo.pth"
+    model_filename = "supervised_upn_new.pth"
     model_path = os.path.join(save_dir, model_filename)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")

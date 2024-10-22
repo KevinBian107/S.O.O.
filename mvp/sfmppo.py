@@ -20,27 +20,26 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
                           NonLinearDynamicsWrapper)
 
 # need good data/consistent data in imitation learning process
-
 @dataclass
 class Args:
-    exp_name: str = "fmppo_halfcheetah"
+    exp_name: str = "sfmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     total_timesteps: int = 3000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
-    ppo_learning_rate: float = 1e-4
+    ppo_learning_rate: float = 3e-4
     upn_learning_rate: float = 8e-5 # lower learning rate
     latent_size: int = 100
-    upn_hidden_layer: int = 256
+    upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
     anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
-    update_epochs: int = 10
+    update_epochs: int = 15
     num_minibatches: int = 32
     norm_adv: bool = True
     clip_coef: float = 0.2
@@ -51,12 +50,15 @@ class Args:
     upn_coef: float = 0.8
     kl_coef: float = 0.1
     target_kl: float = 0.01
-    mix_coord: bool = True # this helps greatly
+
+    # this helps greatly
+    mix_coord: bool = True
     
-    load_upn: str = "supervised_upn_well_trained_ppo.pth" #"supervised_upn_100.pth"
-    imitation_data_path: str= "imitation_data_ppo_well_trained.npz" # data need to match up
-    save_sfm: str = "sfm_hc_test_2.pth"
-    save_sfmppo: str = "sfmppo_hc_test_2.pth"
+    # Data need to match up, this data may be problematic
+    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
+    imitation_data_path: str= "imitation_data_ppo_new.npz"
+    save_sfm: str = "sfm/sfm_new.pth"
+    save_sfmppo: str = "sfmppo/sfmppo_new.pth"
 
     # to be set at runtime
     batch_size: int = 0 
@@ -77,8 +79,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.8)
-        # env = ActionMaskingWrapper(env=env, mask_prob=0.8)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)
@@ -119,6 +121,8 @@ class UPN(nn.Module):
         )
         self.inverse_dynamics = nn.Sequential(
             nn.Linear(latent_dim * 2, args.upn_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(args.upn_hidden_layer, args.upn_hidden_layer),
             nn.ReLU(),
             nn.Linear(args.upn_hidden_layer, action_dim)
         )
@@ -398,9 +402,9 @@ if __name__ == "__main__":
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
                 
-                if args.target_kl is not None and approx_kl > args.target_kl:
-                    print(f"Early stopping at iteration {iteration} due to reaching target KL.")
-                    break
+                # if args.target_kl is not None and approx_kl > args.target_kl:
+                #     print(f"Early stopping at iteration {iteration} due to reaching target KL.")
+                #     break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
