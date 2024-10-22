@@ -207,7 +207,7 @@ def main():
     
     # Load model
     agent = PPOAgent(envs).to(device)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_vector.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo/ppo_hc_kl.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     

@@ -382,6 +382,7 @@ class EnhancedActivationVisualizer:
 def main():
     print("Initializing environment and agent...")
     args = Args()
+    # torch.backends.cudnn.deterministic = args.torch_deterministic
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     print(f"Using device: {device}")
     
@@ -392,7 +393,7 @@ def main():
     
     agent = SFMPPOAgent(envs).to(device)
     print(agent)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo_well_trained.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_new.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     

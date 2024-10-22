@@ -24,13 +24,13 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
 class Args:
     exp_name: str = "sfmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    total_timesteps: int = 3000000
+    total_timesteps: int = 2000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
-    ppo_learning_rate: float = 3e-4
-    upn_learning_rate: float = 8e-5 # lower learning rate
+    ppo_learning_rate: float = 8e-5
+    upn_learning_rate: float = 8e-6 # lower learning rate
     latent_size: int = 100
     upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
@@ -44,7 +44,7 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.01
+    ent_coef: float = 0.00
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
@@ -79,8 +79,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
         # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
-        # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
+        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
+        # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)

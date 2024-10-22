@@ -254,7 +254,7 @@ def main():
     print(f"Environment created: {args.env_id}")
     
     agent = PPOAgent(envs).to(device)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo_hc_test.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "ppo/ppo_hc_kl.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     
