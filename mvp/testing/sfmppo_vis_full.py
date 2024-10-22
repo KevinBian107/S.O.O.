@@ -255,7 +255,7 @@ class EnhancedActivationVisualizer:
             
             # Trajectory line
             self.trajectory_lines[space], = ax.plot(
-                [], [], 'r-', alpha=0.5, linewidth=3
+                [], [], 'r-', alpha=0.5, linewidth=1
             )
             
             # Add explained variance ratio to titles
@@ -393,7 +393,7 @@ def main():
     
     agent = SFMPPOAgent(envs).to(device)
     print(agent)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_stable.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_delay_sensory.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     

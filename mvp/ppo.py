@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
 from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewardWrapper, MultiTimescaleWrapper, 
                           NoisyObservationWrapper, PartialObservabilityWrapper, MultiStepTaskWrapper, ActionMaskingWrapper,
-                          PenalizeLargeActionWrapper, NoFlipWrapper, StabilityWrapper)
+                          PenalizeLargeActionWrapper, NoFlipWrapper, StabilityWrapper, DelayedHalfCheetahEnv)
 
 @dataclass
 class Args:
@@ -24,7 +24,7 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
-    total_timesteps: int = 3000000
+    total_timesteps: int = 2000000
     learning_rate: float = 8e-5
     ppo_hidden_layer: int = 256
     num_envs: int = 1
@@ -39,12 +39,12 @@ class Args:
     clip_vloss: bool = True
     ent_coef: float = 0.01
     vf_coef: float = 0.5
-    kl_coef: float = 0.1
+    kl_coef: float = 0.2
     target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
     load_model: str = None
-    save_path: str = "ppo/ppo_hc_new.pth"
+    save_path: str = "ppo/ppo_hc_delay_sensory.pth"
 
     # to be filled in runtime
     batch_size: int = 0
@@ -72,6 +72,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = NoisyObservationWrapper(env=env, noise_scale=0.1)
         # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         # env = StabilityWrapper(env=env, torso_height_range=(0.5, 1.5), orientation_penalty_scale=1.0)
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)

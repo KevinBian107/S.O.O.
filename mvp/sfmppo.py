@@ -29,7 +29,7 @@ class Args:
     cuda: bool = True
     capture_video: bool = True
     seed: int = 1
-    ppo_learning_rate: float = 8e-5
+    ppo_learning_rate: float = 3e-5
     upn_learning_rate: float = 8e-6 # lower learning rate
     latent_size: int = 100
     upn_hidden_layer: int = 64
@@ -39,24 +39,24 @@ class Args:
     anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
-    update_epochs: int = 15
+    update_epochs: int = 10
     num_minibatches: int = 32
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.00
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
-    kl_coef: float = 0.1
+    kl_coef: float = 0.2
     target_kl: float = 0.01
 
     # this helps greatly
     mix_coord: bool = True
     
     # Data need to match up, this data may be problematic
-    load_upn: str = None #"supervised_upn_new.pth" #"good/supervised_upn_good.pth"
-    load_sfmppo: str = "sfmppo/sfmppo_stable.pth"
+    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
+    load_sfmppo: str = None #"sfmppo/sfmppo_stable.pth"
 
     imitation_data_path: str= "imitation_data_ppo_new.npz"
     save_sfm: str = "sfm/sfm_new.pth"
@@ -86,7 +86,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
