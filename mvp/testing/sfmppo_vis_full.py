@@ -9,7 +9,7 @@ from gymnasium.wrappers import RecordVideo
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from sfmppo import Args, Agent as SFMPPOAgent, make_env as make_env_with_render
+from sfmppo_ewc import Args, Agent as SFMPPOAgent, make_env as make_env_with_render
 
 class EnhancedActivationVisualizer:
     def __init__(self, agent, envs, device, method='pca', fig_size=(20, 10)):
@@ -393,7 +393,7 @@ def main():
     
     agent = SFMPPOAgent(envs).to(device)
     print(agent)
-    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_delay_sensory.pth")
+    model_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_ewc_compare.pth")
     agent.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully")
     

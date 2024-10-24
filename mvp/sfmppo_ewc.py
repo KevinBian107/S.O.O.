@@ -53,7 +53,7 @@ class Args:
     mix_coord: bool = True
     
     load_upn: str = None#"supervised_upn_new.pth"
-    load_sfmppo: str = "sfmppo/sfmppo_stable.pth"
+    load_sfmppo: str = "sfmppo/sfmppo_delay_sensory.pth"
     imitation_data_path: str = "imitation_data_ppo_new.npz"
     save_sfm: str = "sfm/sfm_new.pth"
     save_sfmppo: str = "sfmppo/sfmppo_new.pth"
@@ -77,7 +77,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             env = RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make(env_id)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5) # prev 1, 3
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3) # prev 1, 3
         env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)

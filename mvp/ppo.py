@@ -43,8 +43,8 @@ class Args:
     target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = None
-    save_path: str = "ppo/ppo_hc_delay_sensory.pth"
+    load_model: str = "ppo/ppo_hc_delay_sensory.pth"
+    save_path: str = "ppo/ppo_new.pth"
 
     # to be filled in runtime
     batch_size: int = 0
@@ -72,7 +72,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = NoisyObservationWrapper(env=env, noise_scale=0.1)
         # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         # env = StabilityWrapper(env=env, torso_height_range=(0.5, 1.5), orientation_penalty_scale=1.0)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
