@@ -3,7 +3,7 @@ import time
 import random
 import re
 from dataclasses import dataclass
-from collections import deque
+from collections import defaultdict, deque
 
 import gymnasium as gym
 import numpy as np
@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
 from gymnasium.experimental.wrappers.rendering import RecordVideoV0 as RecordVideo
@@ -19,10 +20,9 @@ from env_wrappers import (JumpRewardWrapper, TargetVelocityWrapper, DelayedRewar
                           NoisyObservationWrapper, MultiStepTaskWrapper, PartialObservabilityWrapper, ActionMaskingWrapper,
                           NonLinearDynamicsWrapper, DelayedHalfCheetahEnv)
 
-# need good data/consistent data in imitation learning process
 @dataclass
 class Args:
-    exp_name: str = "sfmppo_halfcheetah"
+    exp_name: str = "ewc_sfmppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     total_timesteps: int = 2000000
     torch_deterministic: bool = True
@@ -50,19 +50,20 @@ class Args:
     upn_coef: float = 0.8
     kl_coef: float = 0.3
     target_kl: float = 0.01
-
-    # this helps greatly
     mix_coord: bool = True
     
-    # Data need to match up, this data may be problematic
-    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
-    load_sfmppo: str = None #"sfmppo/sfmppo_stable.pth"
-
-    imitation_data_path: str= "imitation_data_ppo_new.npz"
+    load_upn: str = None#"supervised_upn_new.pth"
+    load_sfmppo: str = "sfmppo/sfmppo_stable.pth"
+    imitation_data_path: str = "imitation_data_ppo_new.npz"
     save_sfm: str = "sfm/sfm_new.pth"
-    save_sfmppo: str = "sfmppo/sfmppo_delay_sensory.pth"
-
-    # to be set at runtime
+    save_sfmppo: str = "sfmppo/sfmppo_new.pth"
+    
+    ewc_lambda: float = 5000.0
+    fisher_sample_size: int = 1000
+    consolidation_step: int = 1000
+    importance_threshold: float = 0.1
+    ewc_task_sequence_dir: str = "ewc_task_data"
+    
     batch_size: int = 0 
     minibatch_size: int = 0
     iterations: int = 0
@@ -71,23 +72,13 @@ args = Args()
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
-        if capture_video and idx==0:
+        if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
             env = RecordVideo(env, f"videos/{run_name}")
-            # fixed it by reading Stack Overfloat
         else:
             env = gym.make(env_id)
-        
-        # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
-        # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        # env = JumpRewardWrapper(env, jump_target_height=2.0)
-        # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
-        # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
-        # env = DelayedRewardWrapper(env, delay_steps=20)
-        # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
-        # env = NoisyObservationWrapper(env, noise_scale=0.1)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5) # prev 1, 3
+        env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
@@ -98,7 +89,6 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
     return thunk
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    '''Only on Actor Critic'''
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
@@ -139,7 +129,7 @@ class UPN(nn.Module):
         next_state_pred = self.decoder(z_pred)
         next_state_recon = self.decoder(z_next)
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
-    
+
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
@@ -163,6 +153,8 @@ class Agent(nn.Module):
             layer_init(nn.Linear(args.ppo_hidden_layer, action_dim), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, action_dim))
+        self.fisher_info = None
+        self.parameter_means = None
 
     def get_value(self, x):
         z = self.upn.encoder(x)
@@ -174,17 +166,47 @@ class Agent(nn.Module):
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
-        
         if action is None:
             action = probs.sample()
-
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
 
-    
-    def load_upn(self, file_path):
-        '''Load only the UPN model parameters from the specified file path,
-        Usage for transfering previously elarned experiences to this new one.'''
+    def consolidate_weights(self, data_loader, num_samples):
+        self.fisher_info = self.compute_fisher_matrix(data_loader, num_samples)
+        self.parameter_means = {name: param.data.clone() for name, param in self.named_parameters()}
 
+    def compute_fisher_matrix(self, data_loader, num_samples):
+        '''Compute fisher matrix based on number of samples'''
+        fisher_diagonals = {name: torch.zeros_like(param) for name, param in self.named_parameters()}
+        self.eval()
+        samples_processed = 0
+        for states, actions, _, _, _, _ in data_loader:
+            if samples_processed >= num_samples:
+                break
+            self.zero_grad()
+            _, log_probs, _, _ = self.get_action_and_value(states, actions)
+            log_prob_mean = log_probs.mean()
+            log_prob_mean.backward()
+            for name, param in self.named_parameters():
+                if param.grad is not None:
+                    fisher_diagonals[name] += param.grad.data.pow(2)
+            samples_processed += states.size(0)
+        for name in fisher_diagonals:
+            fisher_diagonals[name] /= samples_processed
+        return fisher_diagonals
+
+    def ewc_loss(self):
+        # Ensure the tensor is created on the correct device
+        device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+        ewc_loss = torch.tensor(0., device=device)
+        if self.fisher_info and self.parameter_means:
+            for name, param in self.named_parameters():
+                mean = self.parameter_means.get(name, None)
+                fisher = self.fisher_info.get(name, None)
+                if mean is not None and fisher is not None:
+                    ewc_loss += (fisher * (param - mean).pow(2)).sum()
+        return ewc_loss
+
+    def load_upn(self, file_path):
         if os.path.exists(file_path):
             print(f"Loading UPN parameters from {file_path}")
             self.upn.load_state_dict(torch.load(file_path))
@@ -198,7 +220,6 @@ def compute_upn_loss(upn, state, action, next_state):
     forward_loss = F.mse_loss(z_pred, z_next.detach())
     inverse_loss = F.mse_loss(action_pred, action)
     upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
-
     return recon_loss, forward_loss, inverse_loss, consistency_loss
 
 def mixed_batch(ppo_states, ppo_actions, ppo_next_states):
@@ -236,19 +257,26 @@ def mixed_batch(ppo_states, ppo_actions, ppo_next_states):
 
     return mixed_states, mixed_actions, mixed_next_states
 
-def plot_metrics(metrics, show_result=False):
-    plt.figure(figsize=(12, 8))
-    plt.clf()
-    plt.title("Training..." if not show_result else "Result")
-    plt.xlabel("Iteration")
-    plt.ylabel("Metrics")
+def save_checkpoint(agent, args, task_id, episode=None, final=False):
+    checkpoint = {
+        'model_state_dict': agent.state_dict(),
+        'fisher_info': agent.fisher_info,
+        'parameter_means': agent.parameter_means
+    }
+    filename = f"task_{task_id}_final.pt" if final else \
+               f"task_{task_id}_episode_{episode}.pt"
+    path = os.path.join(args.ewc_task_sequence_dir, filename)
+    torch.save(checkpoint, path)
 
-    for key, values in metrics.items():
-        plt.plot(values, label=key)
+def load_checkpoint(agent, checkpoint_path):
+    if os.path.exists(checkpoint_path):
+        checkpoint = torch.load(checkpoint_path)
+        agent.load_state_dict(checkpoint['model_state_dict'])
+        agent.fisher_info = checkpoint.get('fisher_info')
+        agent.parameter_means = checkpoint.get('parameter_means')
+        print(f"Loaded model and EWC data from {checkpoint_path}")
 
-    plt.legend()
-    plt.pause(0.001)
-
+# Start the full training
 if __name__ == "__main__":
     args.batch_size = args.num_steps * args.num_envs
     args.minibatch_size = args.batch_size // args.num_minibatches
@@ -264,10 +292,8 @@ if __name__ == "__main__":
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, args.exp_name, args.gamma) for i in range(args.num_envs)]
     )
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
-
     if args.load_upn is not None:
         if args.load_sfmppo is not None:
             print('Loading Full model, cannot load sfm core')
@@ -289,11 +315,11 @@ if __name__ == "__main__":
         else:
             print(f"Model file not found at {data_path}. Starting training from scratch.")
 
-    # Optimizer for PPO (actor and critic)
     ppo_optimizer = optim.Adam([
-    {'params': agent.actor_mean.parameters()},
-    {'params': agent.actor_logstd},
-    {'params': agent.critic.parameters()}], lr=args.ppo_learning_rate, eps=1e-5)
+        {'params': agent.actor_mean.parameters()},
+        {'params': agent.actor_logstd},
+        {'params': agent.critic.parameters()}
+    ], lr=args.ppo_learning_rate)
 
     # Optimizer for UPN
     upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args.upn_learning_rate, eps=1e-5)
@@ -325,7 +351,8 @@ if __name__ == "__main__":
         "recon_losses":[],
         "forward_losses":[],
         "inverse_losses":[],
-        "consist_losses":[]
+        "consist_losses":[],
+        "ewc_losses":[]
     }
 
     next_obs, _ = envs.reset(seed=args.seed)
@@ -449,9 +476,17 @@ if __name__ == "__main__":
 
                 # with torch.no_grad():
                 upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
-                upn_loss = upn_loss * args.upn_coef
-                
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + upn_loss * args.upn_coef + args.kl_coef * approx_kl
+                ewc_loss = agent.ewc_loss()
+
+                # Total Loss
+                total_loss = (
+                    pg_loss - 
+                    args.ent_coef * entropy_loss + 
+                    v_loss * args.vf_coef + 
+                    upn_loss * args.upn_coef + 
+                    args.kl_coef * approx_kl + 
+                    ewc_loss * args.ewc_lambda
+                )
 
                 ppo_loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
                 
@@ -504,6 +539,7 @@ if __name__ == "__main__":
         metrics["approx_kls"].append(approx_kl.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
+        metrics["ewc_losses"].append(ewc_loss.item())
 
         sps = int(global_step / (time.time() - start_time))
         print(f"SPS: {sps}")
@@ -555,6 +591,7 @@ if __name__ == "__main__":
     plt.plot(metrics["inverse_losses"], label='Inverse Loss')
     plt.plot(metrics["recon_losses"], label='Reconstruction Loss')
     plt.plot(metrics["consist_losses"], label='Consistency Loss')
+    plt.plot(metrics["ewc_losses"], label='EWC Loss')
     plt.title('Losses')
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
@@ -573,7 +610,7 @@ if __name__ == "__main__":
     plt.ylabel('Variance')
 
     plt.tight_layout()
-    plt.savefig('sfmppo_results.png')
+    plt.savefig('ewc_sfmppo_results.png')
     plt.show()
 
     # Save the model
