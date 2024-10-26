@@ -52,11 +52,11 @@ class Args:
     target_kl: float = 0.01
     mix_coord: bool = True
     
-    load_upn: str = None#"supervised_upn_new.pth"
-    load_sfmppo: str = "sfmppo/sfmppo_delay_sensory.pth"
+    load_upn: str = "supervised_upn_new.pth"
+    load_sfmppo: str = None #"sfmppo/sfmppo_delay_sensory.pth"
     imitation_data_path: str = "imitation_data_ppo_new.npz"
-    save_sfm: str = "sfm/sfm_new.pth"
-    save_sfmppo: str = "sfmppo/sfmppo_new.pth"
+    save_sfm: str = "sfm/sfm_ewc.pth"
+    save_sfmppo: str = "sfmppo/sfmppo_ewc.pth"
     
     ewc_lambda: float = 5000.0
     fisher_sample_size: int = 1000
@@ -171,12 +171,13 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(z)
 
     def consolidate_weights(self, data_loader, num_samples):
+        '''Weight consolidation only happens for UPN, not full PPO'''
         self.fisher_info = self.compute_fisher_matrix(data_loader, num_samples)
-        self.parameter_means = {name: param.data.clone() for name, param in self.named_parameters()}
+        self.parameter_means = {name: param.data.clone() for name, param in self.upn.named_parameters()}
 
     def compute_fisher_matrix(self, data_loader, num_samples):
         '''Compute fisher matrix based on number of samples'''
-        fisher_diagonals = {name: torch.zeros_like(param) for name, param in self.named_parameters()}
+        fisher_diagonals = {name: torch.zeros_like(param) for name, param in self.upn.named_parameters()}
         self.eval()
         samples_processed = 0
         for states, actions, _, _, _, _ in data_loader:
@@ -186,7 +187,7 @@ class Agent(nn.Module):
             _, log_probs, _, _ = self.get_action_and_value(states, actions)
             log_prob_mean = log_probs.mean()
             log_prob_mean.backward()
-            for name, param in self.named_parameters():
+            for name, param in self.upn.named_parameters():
                 if param.grad is not None:
                     fisher_diagonals[name] += param.grad.data.pow(2)
             samples_processed += states.size(0)
@@ -199,7 +200,7 @@ class Agent(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
         ewc_loss = torch.tensor(0., device=device)
         if self.fisher_info and self.parameter_means:
-            for name, param in self.named_parameters():
+            for name, param in self.upn.named_parameters():
                 mean = self.parameter_means.get(name, None)
                 fisher = self.fisher_info.get(name, None)
                 if mean is not None and fisher is not None:
@@ -226,7 +227,7 @@ def mixed_batch(ppo_states, ppo_actions, ppo_next_states):
     '''3D: sample_size, env_dim, Dof_dim, no sample, concatination direclty'''
 
     # Load imitation data
-    save_dir = os.path.join(os.getcwd(), 'mvp', 'data')
+    save_dir = os.path.join(os.getcwd(), 'sfm', 'data')
     os.makedirs(save_dir, exist_ok=True)
     data_path = os.path.join(save_dir, args.imitation_data_path)
     imitation_data = np.load(data_path)
@@ -300,14 +301,14 @@ if __name__ == "__main__":
         else:
             # Define the path to save and load UPN weights
             print('loaded params for supervised forward model')
-            model_dir = os.path.join(os.getcwd(), 'mvp', 'params')
+            model_dir = os.path.join(os.getcwd(), 'sfm', 'params')
             os.makedirs(model_dir, exist_ok=True)
             load_path = os.path.join(model_dir, args.load_upn)
             # Attempt to load UPN weights
             agent.load_upn(load_path)
     
     if args.load_sfmppo is not None:
-        save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+        save_dir = os.path.join(os.getcwd(),'sfm', 'params')
         data_path = os.path.join(save_dir, args.load_sfmppo)
         if os.path.exists(data_path):
             print(f"Loading sfmppo model from {data_path}")
@@ -614,7 +615,7 @@ if __name__ == "__main__":
     plt.show()
 
     # Save the model
-    save_dir = os.path.join(os.getcwd(), 'mvp', 'params')
+    save_dir = os.path.join(os.getcwd(), 'sfm', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
     data1_path = os.path.join(save_dir, args.save_sfmppo)

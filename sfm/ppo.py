@@ -24,8 +24,8 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
-    total_timesteps: int = 2000000
-    learning_rate: float = 8e-5
+    total_timesteps: int = 10000000
+    learning_rate: float = 6e-5
     ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
@@ -37,14 +37,14 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.01
+    ent_coef: float = 0.02
     vf_coef: float = 0.5
     kl_coef: float = 0.2
     target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = "ppo/ppo_hc_delay_sensory.pth"
-    save_path: str = "ppo/ppo_new.pth"
+    load_model: str = None #"ppo/ppo_hc_delay_sensory.pth"
+    save_path: str = "ppo/ppo_1e7.pth"
 
     # to be filled in runtime
     batch_size: int = 0
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     agent = Agent(envs).to(device)
 
     if args.load_model is not None:
-        save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+        save_dir = os.path.join(os.getcwd(),'sfm', 'params')
         data_path = os.path.join(save_dir, args.load_model)
         if os.path.exists(data_path):
             print(f"Loading model from {data_path}")
@@ -379,7 +379,7 @@ if __name__ == "__main__":
     plt.savefig('ppo_results.png')
     plt.show()
 
-    save_dir = os.path.join(os.getcwd(),'mvp', 'params')
+    save_dir = os.path.join(os.getcwd(),'sfm', 'params')
     os.makedirs(save_dir, exist_ok=True)
 
     import re

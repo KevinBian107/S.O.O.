@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from torch.distributions import Normal
 import torch.nn as nn
 from sfmppo_ewc import Args, Agent as SFMPPOAgent, make_env
-from fmppo_vector_prone import Agent as ProneAgent
+# from fmppo_vector_prone import Agent as ProneAgent
 from ppo import Agent as PPOAgent
 import random
 
@@ -54,12 +54,12 @@ if __name__ == "__main__":
 
     # Load the FM-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
-    sfmppo_path = os.path.join(os.getcwd(), "mvp", "params", "sfmppo/sfmppo_new.pth")
+    sfmppo_path = os.path.join(os.getcwd(), "sfm", "params", "sfmppo/sfmppo_ewc.pth")
     sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "mvp", "params", "ppo/ppo_new.pth")
+    ppo_path = os.path.join(os.getcwd(), "sfm", "params", "ppo/ppo_hc_delay_sensory.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
     # prone_agent = ProneAgent(envs).to(device)

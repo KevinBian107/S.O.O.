@@ -55,11 +55,11 @@ class Args:
     mix_coord: bool = True
     
     # Data need to match up, this data may be problematic
-    load_upn: str = "supervised_upn_delay.pth" #"good/supervised_upn_good.pth"
+    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
     load_sfmppo: str = None #"sfmppo/sfmppo_stable.pth"
 
-    imitation_data_path: str= "imitation_data_ppo_delay.npz"
-    save_sfm: str = "sfm/sfm_delay_sensory_new.pth"
+    imitation_data_path: str= "imitation_data_ppo_new.npz"
+    save_sfm: str = "sfm/sfm_new.pth"
     save_sfmppo: str = "sfmppo/sfmppo_delay_sensory_new.pth"
 
     # to be set at runtime
@@ -86,7 +86,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
+        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -124,6 +124,8 @@ class UPN(nn.Module):
         )
         self.inverse_dynamics = nn.Sequential(
             nn.Linear(latent_dim * 2, args.upn_hidden_layer),
+            nn.ReLU(),
+            nn.Linear(args.upn_hidden_layer, args.upn_hidden_layer),
             nn.ReLU(),
             nn.Linear(args.upn_hidden_layer, action_dim)
         )
