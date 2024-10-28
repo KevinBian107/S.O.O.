@@ -31,10 +31,10 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
           </div>
         <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-SFM/demos/website/ppo_5e6_nice.mp4" type="video/mp4">
+              <source src="../VNL-SFM/demos/website/sofppo_demo1.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Half Cheetah agent trained using PPO</blockquote>
+            <blockquote>Deep-RL Half Cheetah agent trained using SoF-PPO</blockquote>
         </div>
 </div>
 
@@ -62,6 +62,8 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
               <blockquote>Deep-RL Half Cheetah agent trained using SFMPPO Full PCA</blockquote>
           </div> -->
 
-## Schematic:
+## Progress:
 
 ![Alt text](demos/website/dynamics_model.png)
+
+...Currently developing Sub-optimal binding systems

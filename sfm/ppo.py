@@ -24,8 +24,8 @@ class Args:
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
-    total_timesteps: int = 10000000
-    learning_rate: float = 6e-5
+    total_timesteps: int = 2000000
+    learning_rate: float = 8e-5
     ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
@@ -37,14 +37,14 @@ class Args:
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
-    ent_coef: float = 0.02
+    ent_coef: float = 0.01
     vf_coef: float = 0.5
-    kl_coef: float = 0.2
+    kl_coef: float = 0.1
     target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
     load_model: str = None #"ppo/ppo_hc_delay_sensory.pth"
-    save_path: str = "ppo/ppo_1e7.pth"
+    save_path: str = "ppo/ppo_diff_intention.pth"
 
     # to be filled in runtime
     batch_size: int = 0
@@ -63,16 +63,16 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
             env = gym.make(env_id)
         
         # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
-        # env = JumpRewardWrapper(env=env, jump_target_height=1.0)
-        # env = MultiTimescaleWrapper(env, slow_scale=0.001, fast_scale=0.1)
+        env = JumpRewardWrapper(env=env, jump_target_height=1.0)
+        # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         # env = DelayedRewardWrapper(env, delay_steps=50)
         # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)
         # env = ActionMaskingWrapper(env=env, mask_prob=0.5)
         # env = NoisyObservationWrapper(env=env, noise_scale=0.1)
-        # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         # env = StabilityWrapper(env=env, torso_height_range=(0.5, 1.5), orientation_penalty_scale=1.0)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
+
+        # turn this on terminate really quick
+        # env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)

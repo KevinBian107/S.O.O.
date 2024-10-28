@@ -31,7 +31,7 @@ class Args:
     seed: int = 1
     ppo_learning_rate: float = 1e-5
     upn_learning_rate: float = 8e-6 # lower learning rate
-    latent_size: int = 100
+    latent_size: int = 100 # need to be big
     upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
     num_envs: int = 1
@@ -52,15 +52,15 @@ class Args:
     target_kl: float = 0.01
 
     # this helps greatly
-    mix_coord: bool = True
+    mix_coord: bool = False
     
     # Data need to match up, this data may be problematic
-    load_upn: str = "supervised_upn_new.pth" #"good/supervised_upn_good.pth"
+    load_upn: str = None #"supp/supervised_diff_intention.pth" #"good/supervised_upn_good.pth" #"supervised_upn_new.pth"
     load_sfmppo: str = None #"sfmppo/sfmppo_stable.pth"
 
     imitation_data_path: str= "imitation_data_ppo_new.npz"
-    save_sfm: str = "sfm/sfm_new.pth"
-    save_sfmppo: str = "sfmppo/sfmppo_delay_sensory_new.pth"
+    save_sfm: str = "sfm/sfm_pretrain.pth"
+    save_sfmppo: str = "sfmppo/sfmppo_pretrain.pth"
 
     # to be set at runtime
     batch_size: int = 0 
@@ -78,15 +78,14 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         else:
             env = gym.make(env_id)
         
-        # env = MultiStepTaskWrapper(env=env, reward_goal_steps=3)
-        # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        # env = JumpRewardWrapper(env, jump_target_height=2.0)
+        env = TargetVelocityWrapper(env, target_velocity=2.0)
+        env = JumpRewardWrapper(env, jump_target_height=1.0)
         # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
         # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
         # env = DelayedRewardWrapper(env, delay_steps=20)
         # env = NonLinearDynamicsWrapper(env, dynamic_change_threshold=50)
         # env = NoisyObservationWrapper(env, noise_scale=0.1)
-        env = DelayedHalfCheetahEnv(env=env, proprio_delay=2, force_delay=5)
+        # env = DelayedHalfCheetahEnv(env=env, proprio_delay=1, force_delay=3)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -102,6 +101,27 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
+def freeze_base_controller(agent):
+    """Freeze all parameters in the base controller (actor and critic)"""
+    for param in agent.actor_mean.parameters():
+        param.requires_grad = False
+    for param in agent.critic.parameters():
+        param.requires_grad = False
+    agent.actor_logstd.requires_grad = False
+
+def freeze_intention(agent):
+    """Freeze all parameters in the base controller (actor and critic)"""
+    for param in agent.upn.parameters():
+        param.requires_grad = False
+    
+def unfreeze_base_controller(agent):
+    """Unfreeze all parameters in the base controller if needed"""
+    for param in agent.actor_mean.parameters():
+        param.requires_grad = True
+    for param in agent.critic.parameters():
+        param.requires_grad = True
+    agent.actor_logstd.requires_grad = True
 
 class UPN(nn.Module):
     '''Mismatch would have some problem'''
@@ -268,17 +288,7 @@ if __name__ == "__main__":
 
     agent = Agent(envs).to(device)
 
-    if args.load_upn is not None:
-        if args.load_sfmppo is not None:
-            print('Loading Full model, cannot load sfm core')
-        else:
-            # Define the path to save and load UPN weights
-            print('loaded params for supervised forward model')
-            model_dir = os.path.join(os.getcwd(), 'sfm', 'params')
-            os.makedirs(model_dir, exist_ok=True)
-            load_path = os.path.join(model_dir, args.load_upn)
-            # Attempt to load UPN weights
-            agent.load_upn(load_path)
+    # freeze_base_controller(agent)
     
     if args.load_sfmppo is not None:
         save_dir = os.path.join(os.getcwd(),'sfm', 'params')
@@ -288,6 +298,18 @@ if __name__ == "__main__":
             agent.load_state_dict(torch.load(data_path, map_location=device))
         else:
             print(f"Model file not found at {data_path}. Starting training from scratch.")
+        
+    if args.load_upn is not None:
+        # if args.load_sfmppo is not None:
+        #     print('Loading Full model, cannot load sfm core')
+        # else:
+            # Define the path to save and load UPN weights
+            print('loaded params for supervised forward model')
+            model_dir = os.path.join(os.getcwd(), 'sfm', 'params')
+            os.makedirs(model_dir, exist_ok=True)
+            load_path = os.path.join(model_dir, args.load_upn)
+            # Attempt to load UPN weights
+            agent.load_upn(load_path)
 
     # Optimizer for PPO (actor and critic)
     ppo_optimizer = optim.Adam([

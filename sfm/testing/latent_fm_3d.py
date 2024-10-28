@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from fmppo_vector import Args, UPN, make_env
+from sfm.sfmppo import Args, UPN, make_env
 from mpl_toolkits.mplot3d import Axes3D
 
 def extract_latent_representations(upn_model, envs, device, num_episodes=10):

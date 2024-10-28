@@ -78,7 +78,7 @@ if __name__ == "__main__":
     )
     
     # Load model
-    model_path = os.path.join(os.getcwd(), 'sfm', 'params', 'ppo/ppo_hc_delay_sensory.pth')
+    model_path = os.path.join(os.getcwd(), 'sfm', 'params', 'ppo/ppo_diff_intention.pth')
     agent = load_agent(Agent, model_path, envs, device)
     
     if agent is None:
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     save_dir = os.path.join(os.getcwd(), 'sfm', 'data')
     os.makedirs(save_dir, exist_ok=True)
     
-    data_filename = "imitation_data_ppo_delay.npz"
+    data_filename = "imitation_data_ppo_diff_intention.npz"
     npz_path = os.path.join(save_dir, data_filename)
     
     np.savez(npz_path, 

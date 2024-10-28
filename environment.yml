@@ -1,9 +1,9 @@
-name: vnl_extension
+name: lof
 channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.9  # or your preferred Python version
+  - python=3.10.9
   - numpy
   - matplotlib
   - pytorch
@@ -12,5 +12,11 @@ dependencies:
   - gym
   - pip
   - pip:
-      - gym[classic_control]  # for environments like Pendulum
-      - ipython  # For Jupyter notebooks if needed
+      - gym[classic_control]
+      - ipython
+      - gymnasium==0.28.1
+      - pandas
+      - mujoco
+      - imageio
+      - moviepy
+      - scikit-learn
