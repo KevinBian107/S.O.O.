@@ -49,7 +49,7 @@ class Args:
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
     kl_coef: float = 0.3
-    target_kl: float = 0.01
+    target_kl: float = 0.1
 
     # this helps greatly
     mix_coord: bool = False

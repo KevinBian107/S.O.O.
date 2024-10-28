@@ -25,7 +25,7 @@ class Args:
     env_id: str = "HalfCheetah-v4"
     capture_video: bool = True
     total_timesteps: int = 2000000
-    learning_rate: float = 8e-5
+    learning_rate: float = 1e-5
     ppo_hidden_layer: int = 256
     num_envs: int = 1
     num_steps: int = 2048
@@ -43,8 +43,8 @@ class Args:
     target_kl: float = 0.01 # the targeted KL does work well
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = None #"ppo/ppo_hc_delay_sensory.pth"
-    save_path: str = "ppo/ppo_diff_intention.pth"
+    load_model: str = None #"ppo/ppo_stable.pth"
+    save_path: str = "ppo/ppo_no_flip_jump_intention.pth"
 
     # to be filled in runtime
     batch_size: int = 0
@@ -62,8 +62,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         else:
             env = gym.make(env_id)
         
-        # env = TargetVelocityWrapper(env, target_velocity=2.0)
-        env = JumpRewardWrapper(env=env, jump_target_height=1.0)
+        env = TargetVelocityWrapper(env, target_velocity=2.0)
+        env = JumpRewardWrapper(env=env, jump_target_height=2.0)
         # env = NoFlipWrapper(env=env, flip_penalty=-10, max_torso_angle=0.5)
         # env = DelayedRewardWrapper(env, delay_steps=50)
         # env = PartialObservabilityWrapper(env=env, observable_ratio=0.5)

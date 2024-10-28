@@ -89,7 +89,7 @@ class UPN(nn.Module):
         
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='sfm/data/imitation_data_ppo_new.npz'):
+def load_data(file_path='sfm/data/imitation_data_ppo_diff_intention.npz'):
     '''Need to normalize the input'''
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
