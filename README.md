@@ -19,10 +19,10 @@ SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to u
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
-              <source src="../VNL-SFM/demos/website/demo1.mp4" type="video/mp4">
+              <source src="../VNL-SFM/demos/website/ppo_jump_weird.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Inverted Pendulum agent trained using Fm-PPO</blockquote>
+            <blockquote>Deep-RL Half Cheetah agent trained using PPO and stuck on weird local minimum</blockquote>
           </div>
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>

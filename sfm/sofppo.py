@@ -49,7 +49,13 @@ class Args:
     max_grad_norm: float = 0.5
     upn_coef: float = 0.8
     kl_coef: float = 0.3
-    target_kl: float = 0.1
+
+    # exactly how far we want distribution to be
+    # what's good for suboptimal
+    latent_target_kl: float = 0.01
+
+    # when latent_kl_coef = 0, no constrain on MOMPO constrain
+    latent_kl_coef: float = 0.0
 
     # this helps greatly
     mix_coord: bool = False
@@ -317,11 +323,10 @@ def compute_upn_loss(upn, state, action, next_state, kl_constraint):
     kl_next_loss = -0.5 * torch.sum(1 + logvar_next - mu_next.pow(2) - logvar_next.exp())
     
     # MOMPO-style constraint violation penalty
-    constraint_violation = F.relu(kl_constraint - args.target_kl)
+    constraint_violation = F.relu(kl_constraint - args.latent_target_kl)
     
-    # Total UPN loss with constraint
-    upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss + \
-               0.01 * (kl_loss + kl_next_loss) + args.kl_coef * constraint_violation
+    # upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss + \
+    #            0.01 * (kl_loss + kl_next_loss) + args.kl_coef * constraint_violation
 
     return recon_loss, forward_loss, inverse_loss, consistency_loss, kl_loss, constraint_violation
 
@@ -579,10 +584,20 @@ if __name__ == "__main__":
                                 b_next_obs_imitate[mb_inds], kl_constraint)
 
                 # Combined losses
-                upn_loss = recon_loss + forward_loss + inverse_loss + consistency_loss + \
-                        0.01 * kl_loss + args.kl_coef * constraint_violation
+                upn_loss = args.upn_coef * (recon_loss +
+                                            forward_loss +
+                                            inverse_loss +
+                                            consistency_loss +
+                                            kl_loss * args.latent_kl_coef +
+                                            constraint_violation * args.latent_kl_coef
+                                            )
+                # previously not on in sfmppo
                 
-                ppo_loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                ppo_loss = (pg_loss -
+                            args.ent_coef * entropy_loss
+                            + v_loss * args.vf_coef
+                            + args.kl_coef * approx_kl
+                            )
                 
                 # PPO backward pass and optimization
                 ppo_optimizer.zero_grad()
