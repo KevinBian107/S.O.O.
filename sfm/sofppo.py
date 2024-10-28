@@ -55,10 +55,10 @@ class Args:
     mix_coord: bool = False
     
     # Data need to match up, this data may be problematic
-    load_upn: str = "supp/supervised_vae.pth"
+    load_upn: str = "supp/supervised_vae_jump.pth"
     load_sfmppo: str = "sfmppo/sfmppo_stable.pth" # can still use this becuase only load in PPO
 
-    imitation_data_path: str= "imitation_data_ppo_new.npz"
+    imitation_data_path: str= None #"imitation_data_ppo_new.npz"
     save_sfm: str = "sfm/sfm_try.pth"
     save_sfmppo: str = "sfmppo/sfmppo_try.pth"
 
@@ -251,10 +251,8 @@ class Agent(nn.Module):
         """ Map action space to latent space dimension, both action mean and action logstd"""
         action_mean = self.actor_mean(z)
         action_logstd = self.actor_logstd.expand_as(action_mean)
-
         action_latent_mean = self.action_mean_to_latent(action_mean)
         action_latent_var = self.action_var_to_latent(action_logstd)
-
         return action_latent_mean, action_latent_var
     
     def load_upn(self, file_path):
@@ -268,7 +266,7 @@ class Agent(nn.Module):
             print(f"No existing UPN model found at {file_path}, starting with new parameters.")
     
     def load_ppo(self, file_path):
-        '''Load only the PPO model parameters (actor and critic) from the specified file path.'''
+        '''Load only the PPO model parameters (actor and critic only) from the specified file path.'''
         if os.path.exists(file_path):
             print(f"Loading PPO parameters from {file_path}")
             checkpoint = torch.load(file_path)
@@ -287,7 +285,7 @@ def compute_kl_div_constraint(agent, state):
         mu, logvar = agent.upn.encode(state)
         z = agent.upn.reparameterize(mu, logvar)
         
-        # Transform the action into the latent space
+        # Mapping from action to latent
         action_latent_mean, action_latent_var = agent.get_transformed_action_distribution(z)
         
         # Compare distributions in the latent space

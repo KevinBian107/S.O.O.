@@ -12,7 +12,7 @@ class Args:
     learning_rate: float = 3e-4
     batch_size: int = 64
     upn_hidden_layer: int = 64
-    latent_size: int = 6
+    latent_size: int = 100
     num_epochs: int = 100
     cuda: bool = True
 
@@ -89,7 +89,7 @@ class UPN(nn.Module):
         
         return z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred
 
-def load_data(file_path='sfm/data/imitation_data_ppo_diff_intention.npz'):
+def load_data(file_path='sfm/data/imitation_data_ppo_no_flip_jump_intention.npz'):
     '''Need to normalize the input'''
     data = np.load(file_path)
     states = torch.FloatTensor(data['states']).to(device)
@@ -217,7 +217,7 @@ def main():
 
     save_dir = os.path.join(os.getcwd(), 'sfm', 'params')
     os.makedirs(save_dir, exist_ok=True)
-    model_filename = "supp/supervised_vae_pretrain.pth"
+    model_filename = "supp/supervised_vae_jump.pth"
     model_path = os.path.join(save_dir, model_filename)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")
