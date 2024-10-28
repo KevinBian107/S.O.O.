@@ -14,7 +14,7 @@ Does establishing a Forward Model, similar to the Cerebellum's function, facilit
 
 
 ## SFM-PPO & SOF-PPO Control Examples
-SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to understand the dynamics of teh environment amd SOF-PPO is a variant of PPO (Sub-Optimal Forward) as well where instead of just the SFM, the model is also trained to find "local minimum" or sub-optimal minimum in one task in order for completions in more than just one task.
+SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to understand the dynamics of teh environment amd SOF-PPO is a variant of PPO (Sub-Optimal Forward) as well where instead of just the SFM, the model is also trained to find "local minimum" or sub-optimal minimum in one task in order for completions in more than just one task. The below are a few Deep-RL Half Cheetah agent demos:
 
 <div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
@@ -22,21 +22,21 @@ SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to u
               <source src="../VNL-SFM/demos/website/ppo_jump_weird.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Half Cheetah agent trained using PPO and stuck on weird local minimum</blockquote>
+            <blockquote>Trained using PPO on "Jump Task" and stuck on weird local minimum</blockquote>
           </div>
           <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
               <source src="../VNL-SFM/demos/website/sfmppo_converge_712.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Half Cheetah agent trained using SFM-PPO</blockquote>
+            <blockquote>Trained using SFM-PPO on "Normal Running Task"</blockquote>
           </div>
         <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
             <video controls autoplay style="width: 100%; height: auto;" muted>
               <source src="../VNL-SFM/demos/website/sofppo_demo1.mp4" type="video/mp4">
               Your browser does not support the video tag.
             </video>
-            <blockquote>Deep-RL Half Cheetah agent trained using SOF-PPO</blockquote>
+            <blockquote>Trained using SOF-PPO on "Normal Running Task" but with world model intention bounding</blockquote>
         </div>
 </div>
 
