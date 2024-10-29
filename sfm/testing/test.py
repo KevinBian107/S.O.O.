@@ -9,8 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.distributions import Normal
 import torch.nn as nn
-from sfmppo import Args, Agent as SFMPPOAgent, make_env
-# from fmppo_vector_prone import Agent as ProneAgent
+from sofppo_constrain import Args, Agent as SFMPPOAgent, make_env
 from ppo import Agent as PPOAgent
 import random
 
@@ -49,8 +48,6 @@ if __name__ == "__main__":
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, args.exp_name, args.gamma) for i in range(args.num_envs)]
     )
-    # env = gym.vector.SyncVectorEnv([lambda: TargetVelocityWrapper(gym.make(env_id), target_velocity=1.0)])
-    # env = gym.vector.SyncVectorEnv([lambda: JumpRewardWrapper(gym.make(env_id), jump_target_height=1.0)])
 
     # Load the FM-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
@@ -59,21 +56,15 @@ if __name__ == "__main__":
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "sfm", "params", "ppo/ppo_diff_intention.pth")
+    ppo_path = os.path.join(os.getcwd(), "sfm", "params", "ppo/ppo_no_flip_jump_intention.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
-    # prone_agent = ProneAgent(envs).to(device)
-    # prone_path = os.path.join(os.getcwd(), "mvp", "params", "fmppo_vector_prone.pth")
-    # prone_agent.load_state_dict(torch.load(prone_path, map_location=device))
-
-    episode_num = 200
+    episode_num = 100
     sfmppo_returns = evaluate_model(sfmppo_agent, envs, device, num_episodes=episode_num)
-    # prone_returns = evaluate_model(prone_agent, envs, device, num_episodes=episode_num)
     ppo_returns = evaluate_model(ppo_agent, envs, device, num_episodes=episode_num)
 
     plt.figure(figsize=(10, 6))
     plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="SFM-PPO", marker='o')
-    # plt.plot(range(1, len(prone_returns)+1), prone_returns, label="Prone FM-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
     # plt.title("Episode Returns for PPO & SFM-PPO On 0.8 PA/POMDP, Change of Dynamics")
     plt.title("Episode Returns for PPO & SFM-PPO On More Delayed Half-Cheetah Env")
