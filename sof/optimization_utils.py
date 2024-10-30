@@ -87,7 +87,7 @@ def unfreeze_base_controller(agent):
         param.requires_grad = True
     agent.actor_logstd.requires_grad = True
 
-def compute_intention_action_distribution(agent, state, advantage, epsilon_k):
+def compute_intention_action_distribution(agent, state, advantage, epsilon_k, eta_k):
     """
     Compute the softened intention policy distribution (optimal action distribution) based on the current base policy and advantage values.
     This approximates the EM algorithm's expectation step, adjusting the policy softly towards higher-advantage actions.
@@ -100,15 +100,13 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k):
         # eta_k = optimize_eta_k(state, advantage, base_dist, epsilon_k)
         # print(eta_k)
 
-        eta_k = args_sof.eta_k
-
         # Softened intention distribution using advantage weights
         weights = (advantage.view(-1, 1) / eta_k).exp()
 
         intention_dist = Normal(base_dist.mean * weights, base_dist.stddev * weights)
         # print(base_dist.mean.shape)
     
-    return intention_dist, eta_k
+    return intention_dist
 
 
 def compute_lagrangian_kl_constraint(agent, state, eta_k, epsilon_k, intention_dist):
@@ -137,6 +135,18 @@ def compute_upn_loss(upn, state, action, next_state):
     inverse_loss = F.mse_loss(action_pred, action)
 
     return recon_loss, forward_loss, inverse_loss, consistency_loss
+
+def compute_eta_k_loss(agent, b_advantages, epsilon_k):
+    """
+    Computes the eta_k loss to enforce KL constraint using advantages (A_k).
+    """
+    # Calculate the log-sum-exp with A_k (advantages) and the scaling by eta_k
+    log_sum_exp_term = torch.logsumexp(b_advantages / agent.eta_k, dim=-1).mean()
+    
+    # Construct the full loss for eta_k optimization
+    eta_loss = agent.eta_k * epsilon_k + agent.eta_k * log_sum_exp_term
+    return eta_loss
+
 
 def eta_k_objective(eta, states, advantages, old_policy, epsilon_k):
     """

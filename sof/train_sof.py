@@ -65,6 +65,8 @@ def train_sofppo_agent():
     # Optimizer for UPN
     upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args_sof.upn_learning_rate, eps=1e-5)
 
+    eta_optimizer = optim.Adam([agent.eta_k], lr=args_sof.eta_learning_rate, eps=1e-5)
+
     # ALGO Logic: Storage setup
     obs = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_observation_space.shape).to(args_sof.device)
     actions = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_action_space.shape).to(args_sof.device)
@@ -92,7 +94,8 @@ def train_sofppo_agent():
         "recon_losses":[],
         "forward_losses":[],
         "inverse_losses":[],
-        "consist_losses":[]
+        "consist_losses":[],
+        "kl_constrained_penalty":[]
     }
 
     next_obs, _ = envs.reset(seed=args_sof.seed)
@@ -212,15 +215,18 @@ def train_sofppo_agent():
                 # Entropy loss
                 entropy_loss = entropy.mean()
 
+                eta_loss = compute_eta_k_loss(agent, b_advantages, args_sof.epsilon_k)
+
                 # Lagrangian Objective (Adjusted with KL Intention Distribution Constraint)
-                intention_dist, eta_k = compute_intention_action_distribution(agent,
-                                                                              b_obs_imitate[mb_inds],
-                                                                              b_advantages[mb_inds],
-                                                                              args_sof.epsilon_k
-                                                                              )
+                intention_dist = compute_intention_action_distribution(agent,
+                                                                       b_obs_imitate[mb_inds],
+                                                                       b_advantages[mb_inds],
+                                                                       args_sof.epsilon_k,
+                                                                       agent.eta_k
+                                                                       )
                 kl_constraint_penalty = compute_lagrangian_kl_constraint(agent,
                                                                          b_obs_imitate[mb_inds],
-                                                                         eta_k,
+                                                                         agent.eta_k,
                                                                          args_sof.epsilon_k,
                                                                          intention_dist
                                                                          )
@@ -259,6 +265,15 @@ def train_sofppo_agent():
                 nn.utils.clip_grad_norm_(agent.upn.parameters(), args_sof.max_grad_norm)
                 upn_optimizer.step()
 
+                # Only backpropagate the KL penalty through eta_k
+                eta_optimizer.zero_grad()
+                eta_loss.backward()
+                eta_optimizer.step()
+                
+                # Clip eta_k to be positive
+                with torch.no_grad():
+                    agent.eta_k.clamp_(min=1e-5)
+
                 for name, param in agent.named_parameters():
                     if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
                         print(f"NaN or Inf detected in gradients of {name}")
@@ -286,6 +301,7 @@ def train_sofppo_agent():
         metrics["consist_losses"].append(consistency_loss.item())
         metrics["entropies"].append(entropy_loss.item())
         metrics["approx_kls"].append(approx_kl.item())
+        metrics["kl_constrained_penalty"].append(kl_constraint_penalty.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
 
@@ -300,7 +316,7 @@ def train_sofppo_agent():
     plt.subplot(2, 3, 1)
     plt.plot(metrics["episodic_returns"])
 
-    avg_interval = 50
+    avg_interval = args_sof.graph_avg_interval
     # Ensure that metrics["episodic_returns"] is a 1D list or array
     episodic_returns = np.array(metrics["episodic_returns"]).flatten()
 
@@ -325,11 +341,17 @@ def train_sofppo_agent():
     plt.xlabel('Episode')
     plt.ylabel('Approx KLs')
 
+    # plt.subplot(2, 3, 3)
+    # plt.plot(metrics["learning_rates"])
+    # plt.title('Learning Rate')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('LR')
+
     plt.subplot(2, 3, 3)
-    plt.plot(metrics["learning_rates"])
-    plt.title('Learning Rate')
+    plt.plot(metrics["kl_constrained_penalty"])
+    plt.title('KL Constraint Penalty')
     plt.xlabel('Iteration')
-    plt.ylabel('LR')
+    plt.ylabel('KL-CP')
 
     plt.subplot(2, 3, 4)
     plt.plot(metrics["value_losses"], label='Value Loss')

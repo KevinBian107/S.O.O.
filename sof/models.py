@@ -85,6 +85,8 @@ class Agent_sof(nn.Module):
         latent_dim = args_sof.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
+        self.eta_k = torch.ones((args_sof.num_envs,)).to(args_sof.device)
+
         self.action_mean_to_latent = nn.Sequential(
             nn.Linear(action_dim, latent_dim), 
             nn.Tanh(), 
@@ -114,6 +116,7 @@ class Agent_sof(nn.Module):
     def get_value(self, x):
         # Use the VAE encoder to get the mean and log variance
         mu, logvar = self.upn.encode(x)
+
         # Reparameterize to sample z from the distribution
         z = self.upn.reparameterize(mu, logvar)
         return self.critic(z)

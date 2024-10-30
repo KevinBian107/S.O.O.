@@ -12,6 +12,7 @@ class Args_sof:
     seed: int = 1
     ppo_learning_rate: float = 6e-5
     upn_learning_rate: float = 8e-6
+    eta_learning_rate: float = 8e-6
     latent_size: int = 100
     upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
@@ -22,6 +23,7 @@ class Args_sof:
     gae_lambda: float = 0.95
     update_epochs: int = 10
     num_minibatches: int = 32
+    graph_avg_interval: int = 50
     norm_adv: bool = True
     clip_coef: float = 0.2
     clip_vloss: bool = True
@@ -33,9 +35,6 @@ class Args_sof:
 
     # exactly how far we want distribution to be
     epsilon_k: float = 0.01
-
-    # convex optimization yield approximately 1.0
-    eta_k: float = 1.0
 
     # when constrain_weights is zero, no EM constrain
     constrain_weights: float = 0.8
