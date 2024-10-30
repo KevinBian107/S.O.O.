@@ -102,8 +102,9 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k, et
 
         # Softened intention distribution using advantage weights
         weights = (advantage.view(-1, 1) / eta_k).exp()
+        safe_stddev = torch.clamp(base_dist.stddev * weights, min=1e-6)
 
-        intention_dist = Normal(base_dist.mean * weights, base_dist.stddev * weights)
+        intention_dist = Normal(base_dist.mean * weights, safe_stddev)
         # print(base_dist.mean.shape)
     
     return intention_dist

@@ -85,7 +85,7 @@ class Agent_sof(nn.Module):
         latent_dim = args_sof.latent_size
 
         self.upn = UPN(state_dim, action_dim, latent_dim)
-        self.eta_k = torch.ones((args_sof.num_envs,)).to(args_sof.device)
+        self.eta_k = torch.ones((args_sof.num_envs,), requires_grad=True).to(args_sof.device)
 
         self.action_mean_to_latent = nn.Sequential(
             nn.Linear(action_dim, latent_dim), 

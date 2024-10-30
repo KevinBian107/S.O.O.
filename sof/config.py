@@ -5,7 +5,7 @@ class Args_sof:
     exp_name: str = "sofppo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     device: str = 'cpu'
-    total_timesteps: int = 3000000
+    total_timesteps: int = 2000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
