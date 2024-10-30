@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-from utils import *
+from optimization_utils import *
 
 class UPN(nn.Module):
     def __init__(self, state_dim, action_dim, latent_dim):

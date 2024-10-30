@@ -9,50 +9,50 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from config import args
+from config import args_sof
 from environments import make_env
 from models import *
-from utils import *
+from optimization_utils import *
 
 def train_sofppo_agent():
-    args.batch_size = args.num_steps * args.num_envs
-    args.minibatch_size = args.batch_size // args.num_minibatches
-    args.iterations = args.total_timesteps // args.batch_size
+    args_sof.batch_size = args_sof.num_steps * args_sof.num_envs
+    args_sof.minibatch_size = args_sof.batch_size // args_sof.num_minibatches
+    args_sof.iterations = args_sof.total_timesteps // args_sof.batch_size
 
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
+    random.seed(args_sof.seed)
+    np.random.seed(args_sof.seed)
+    torch.manual_seed(args_sof.seed)
+    torch.backends.cudnn.deterministic = args_sof.torch_deterministic
 
-    args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    args_sof.device = torch.device("cuda" if torch.cuda.is_available() and args_sof.cuda else "cpu")
 
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, args.exp_name, args.gamma) for i in range(args.num_envs)]
+        [make_env(args_sof.env_id, i, args_sof.capture_video, args_sof.exp_name, args_sof.gamma) for i in range(args_sof.num_envs)]
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent_sof(envs).to(args.device)
+    agent = Agent_sof(envs).to(args_sof.device)
 
     # freeze_base_controller(agent)
     
-    if args.load_sfmppo is not None:
+    if args_sof.load_sfmppo is not None:
         save_dir = os.path.join(os.getcwd(), 'sof', 'params', 'sofppo')
-        data_path = os.path.join(save_dir, args.load_sfmppo)
+        data_path = os.path.join(save_dir, args_sof.load_sfmppo)
         if os.path.exists(data_path):
             print(f"Loading sfmppo model from {data_path}")
             agent.load_ppo(data_path)  # Use the new method to load only PPO parameters
         else:
             print(f"Model file not found at {data_path}. Starting training from scratch.")
 
-    if args.load_upn is not None:
-        # if args.load_sfmppo is not None:
+    if args_sof.load_upn is not None:
+        # if args_sof.load_sfmppo is not None:
         #     print('Loading Full model, cannot load sfm core')
         # else:
             # Define the path to save and load UPN weights
             print('loaded params for supervised forward model')
             model_dir = os.path.join(os.getcwd(), 'sof', 'params', 'supp')
             os.makedirs(model_dir, exist_ok=True)
-            load_path = os.path.join(model_dir, args.load_upn)
+            load_path = os.path.join(model_dir, args_sof.load_upn)
             # Attempt to load UPN weights
             agent.load_upn(load_path)
 
@@ -60,20 +60,20 @@ def train_sofppo_agent():
     ppo_optimizer = optim.Adam([
     {'params': agent.actor_mean.parameters()},
     {'params': agent.actor_logstd},
-    {'params': agent.critic.parameters()}], lr=args.ppo_learning_rate, eps=1e-5)
+    {'params': agent.critic.parameters()}], lr=args_sof.ppo_learning_rate, eps=1e-5)
 
     # Optimizer for UPN
-    upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args.upn_learning_rate, eps=1e-5)
+    upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args_sof.upn_learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(args.device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(args.device)
-    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(args.device)
-    rewards = torch.zeros((args.num_steps, args.num_envs)).to(args.device)
-    dones = torch.zeros((args.num_steps, args.num_envs)).to(args.device)
-    values = torch.zeros((args.num_steps, args.num_envs)).to(args.device)
+    obs = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_observation_space.shape).to(args_sof.device)
+    actions = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_action_space.shape).to(args_sof.device)
+    logprobs = torch.zeros((args_sof.num_steps, args_sof.num_envs)).to(args_sof.device)
+    rewards = torch.zeros((args_sof.num_steps, args_sof.num_envs)).to(args_sof.device)
+    dones = torch.zeros((args_sof.num_steps, args_sof.num_envs)).to(args_sof.device)
+    values = torch.zeros((args_sof.num_steps, args_sof.num_envs)).to(args_sof.device)
     # this is only for upn
-    next_obs_all = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(args.device)
+    next_obs_all = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_observation_space.shape).to(args_sof.device)
 
     # Logging setup
     global_step = 0
@@ -95,20 +95,20 @@ def train_sofppo_agent():
         "consist_losses":[]
     }
 
-    next_obs, _ = envs.reset(seed=args.seed)
-    next_obs = torch.Tensor(next_obs).to(args.device)
-    next_done = torch.zeros(args.num_envs).to(args.device)
+    next_obs, _ = envs.reset(seed=args_sof.seed)
+    next_obs = torch.Tensor(next_obs).to(args_sof.device)
+    next_done = torch.zeros(args_sof.num_envs).to(args_sof.device)
 
-    for iteration in range(1, args.iterations + 1):
-        if args.anneal_lr:
-            frac = 1.0 - (iteration - 1.0) / args.iterations
-            lrnow = frac * args.ppo_learning_rate
+    for iteration in range(1, args_sof.iterations + 1):
+        if args_sof.anneal_lr:
+            frac = 1.0 - (iteration - 1.0) / args_sof.iterations
+            lrnow = frac * args_sof.ppo_learning_rate
             ppo_optimizer.param_groups[0]["lr"] = lrnow
 
         metrics["learning_rates"].append(ppo_optimizer.param_groups[0]["lr"])
 
-        for step in range(0, args.num_steps):
-            global_step += args.num_envs
+        for step in range(0, args_sof.num_steps):
+            global_step += args_sof.num_envs
             obs[step] = next_obs
             dones[step] = next_done
 
@@ -120,8 +120,8 @@ def train_sofppo_agent():
 
             next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
             next_done = np.logical_or(terminations, truncations)
-            rewards[step] = torch.tensor(reward).to(args.device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(args.device), torch.Tensor(next_done).to(args.device)
+            rewards[step] = torch.tensor(reward).to(args_sof.device).view(-1)
+            next_obs, next_done = torch.Tensor(next_obs).to(args_sof.device), torch.Tensor(next_done).to(args_sof.device)
             next_obs_all[step] = next_obs
 
             if "final_info" in infos:
@@ -133,20 +133,20 @@ def train_sofppo_agent():
 
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
-            advantages = torch.zeros_like(rewards).to(args.device)
+            advantages = torch.zeros_like(rewards).to(args_sof.device)
             lastgaelam = 0
-            for t in reversed(range(args.num_steps)):
-                if t == args.num_steps - 1:
+            for t in reversed(range(args_sof.num_steps)):
+                if t == args_sof.num_steps - 1:
                     nextnonterminal = 1.0 - next_done
                     nextvalues = next_value
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
-                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                delta = rewards[t] + args_sof.gamma * nextvalues * nextnonterminal - values[t]
+                advantages[t] = lastgaelam = delta + args_sof.gamma * args_sof.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
         
-        if args.mix_coord:
+        if args_sof.mix_coord:
             # mixing screw things up, isolate the problem bit by bit
             obs_imitate, actions_imitate, next_obs_imitate = mixed_batch(obs, actions, next_obs_all)
         else:
@@ -165,12 +165,12 @@ def train_sofppo_agent():
         b_actions_imitate = actions_imitate.reshape((-1,) + envs.single_action_space.shape)
         b_next_obs_imitate = next_obs_imitate.reshape((-1,) + envs.single_observation_space.shape) # previous error of passing the same obs help may be due to having 2 obs in action selection
         
-        b_inds = np.arange(args.batch_size)
+        b_inds = np.arange(args_sof.batch_size)
         clipfracs_batch = []
-        for epoch in range(args.update_epochs):
+        for epoch in range(args_sof.update_epochs):
             np.random.shuffle(b_inds)
-            for start in range(0, args.batch_size, args.minibatch_size):
-                end = start + args.minibatch_size
+            for start in range(0, args_sof.batch_size, args_sof.minibatch_size):
+                end = start + args_sof.minibatch_size
                 mb_inds = b_inds[start:end]
 
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
@@ -181,27 +181,27 @@ def train_sofppo_agent():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs_batch += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+                    clipfracs_batch += [((ratio - 1.0).abs() > args_sof.clip_coef).float().mean().item()]
                 
-                # if args.target_kl is not None and approx_kl > args.target_kl:
+                # if args_sof.target_kl is not None and approx_kl > args_sof.target_kl:
                 #     print(f"Early stopping at iteration {iteration} due to reaching target KL.")
                 #     break
 
                 mb_advantages = b_advantages[mb_inds]
-                if args.norm_adv:
+                if args_sof.norm_adv:
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
 
                 pg_loss1 = -mb_advantages * ratio
-                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args_sof.clip_coef, 1 + args_sof.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 newvalue = newvalue.view(-1)
-                if args.clip_vloss:
+                if args_sof.clip_vloss:
                     v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
                     v_clipped = b_values[mb_inds] + torch.clamp(
                         newvalue - b_values[mb_inds],
-                        -args.clip_coef,
-                        args.clip_coef,
+                        -args_sof.clip_coef,
+                        args_sof.clip_coef,
                     )
                     v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
                     v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
@@ -216,12 +216,12 @@ def train_sofppo_agent():
                 intention_dist, eta_k = compute_intention_action_distribution(agent,
                                                                               b_obs_imitate[mb_inds],
                                                                               b_advantages[mb_inds],
-                                                                              args.epsilon_k
+                                                                              args_sof.epsilon_k
                                                                               )
                 kl_constraint_penalty = compute_lagrangian_kl_constraint(agent,
                                                                          b_obs_imitate[mb_inds],
                                                                          eta_k,
-                                                                         args.epsilon_k,
+                                                                         args_sof.epsilon_k,
                                                                          intention_dist
                                                                          )
                 recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(agent.upn,
@@ -230,13 +230,13 @@ def train_sofppo_agent():
                                                                                             b_next_obs_imitate[mb_inds]
                                                                                             )
                 ppo_loss = (pg_loss -
-                            args.ent_coef * entropy_loss +
-                            v_loss * args.vf_coef +
-                            approx_kl * args.kl_coef +
-                            kl_constraint_penalty * args.constrain_weights
+                            args_sof.ent_coef * entropy_loss +
+                            v_loss * args_sof.vf_coef +
+                            approx_kl * args_sof.kl_coef +
+                            kl_constraint_penalty * args_sof.constrain_weights
                             )
                 # Previously not on in sfmppo
-                upn_loss = args.upn_coef * (recon_loss +
+                upn_loss = args_sof.upn_coef * (recon_loss +
                                             forward_loss +
                                             inverse_loss +
                                             consistency_loss
@@ -249,14 +249,14 @@ def train_sofppo_agent():
                     list(agent.actor_mean.parameters()) + 
                     [agent.actor_logstd] + 
                     list(agent.critic.parameters()), 
-                    args.max_grad_norm
+                    args_sof.max_grad_norm
                 )
                 ppo_optimizer.step()
 
                 # UPN backward pass and optimization
                 upn_optimizer.zero_grad()
                 upn_loss.backward()
-                nn.utils.clip_grad_norm_(agent.upn.parameters(), args.max_grad_norm)
+                nn.utils.clip_grad_norm_(agent.upn.parameters(), args_sof.max_grad_norm)
                 upn_optimizer.step()
 
                 for name, param in agent.named_parameters():
@@ -269,7 +269,7 @@ def train_sofppo_agent():
                 #         grad_norms.append(param.grad.norm().item())
                 # print("Max grad norm:", max(grad_norms))
 
-                # nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+                # nn.utils.clip_grad_norm_(agent.parameters(), args_sof.max_grad_norm)
                 # # optimizer.step()
 
         # Logging
@@ -365,8 +365,8 @@ def train_sofppo_agent():
     save_dir2 = os.path.join(os.getcwd(), 'sof', 'params', 'sof')
     os.makedirs(save_dir, exist_ok=True)
 
-    data1_path = os.path.join(save_dir1, args.save_sfmppo)
-    data2_path = os.path.join(save_dir2, args.save_sfm)
+    data1_path = os.path.join(save_dir1, args_sof.save_sfmppo)
+    data2_path = os.path.join(save_dir2, args_sof.save_sfm)
 
     print('Saved at: ', data1_path)
     torch.save(agent.state_dict(), data1_path)

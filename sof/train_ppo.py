@@ -12,7 +12,7 @@ import torch.optim as optim
 from config import args_ppo
 from environments import make_env
 from models import *
-from utils import *
+from optimization_utils import *
 
 def train_ppo_agent():
     args_ppo.batch_size = int(args_ppo.num_envs * args_ppo.num_steps)

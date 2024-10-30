@@ -8,11 +8,10 @@ import matplotlib.pyplot as plt
 
 from config import args_supp
 from models import UPN
-from utils import *
-
-# ensure data is correct, is all in the data, must use consistent non stop data
+from optimization_utils import *
 
 def train_model(model, dataloader, optimizer):
+    '''Ensure data is correct, is all in the data, must use consistent non stop data'''
     model.train()
     total_loss = 0
     total_recon_loss = 0
