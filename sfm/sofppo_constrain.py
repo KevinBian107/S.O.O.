@@ -54,10 +54,10 @@ class Args:
     # exactly how far we want distribution to be
     # what's good for suboptimal
     epsilon_k: float = 0.01
-    eta_k: float = 0.01
+    eta_k: float = 1.0
 
     # when constrain_weights = 0, no constrain on MOMPO constrain
-    constrain_weights: float = 0.5
+    constrain_weights: float = 0.8
 
     # this helps greatly
     mix_coord: bool = False
@@ -293,14 +293,20 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k):
     This approximates the EM algorithm's expectation step, adjusting the policy softly towards higher-advantage actions.
     """
     with torch.no_grad():
-        action_mean, action_std = agent.actor_mean(state), agent.actor_logstd.exp()
+        mu, logvar = agent.upn.encode(state)
+        z = agent.upn.reparameterize(mu, logvar)
+        action_mean, action_std = agent.actor_mean(z), agent.actor_logstd.exp()
         base_dist = Normal(action_mean, action_std)
-        eta_k = optimize_eta_k(state, advantage, base_dist, epsilon_k)
+        # eta_k = optimize_eta_k(state, advantage, base_dist, epsilon_k)
+        # print(eta_k)
+
+        eta_k = args.eta_k
 
         # Softened intention distribution using advantage weights
-        weights = (advantage / eta_k).exp()
+        weights = (advantage.view(-1, 1) / eta_k).exp()
 
         intention_dist = Normal(base_dist.mean * weights, base_dist.stddev * weights)
+        # print(base_dist.mean.shape)
     
     return intention_dist, eta_k
 
@@ -308,12 +314,12 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k):
 def compute_lagrangian_kl_constraint(agent, state, eta_k, epsilon_k, intention_dist):
     """Compute KL divergence between optimal "soften" intention disytribution and current base control policy distribution"""
     with torch.no_grad():
+        # is this still needed?
+        # action_latent_mean, action_latent_var = agent.get_transformed_action_distribution(z)
         mu, logvar = agent.upn.encode(state)
         z = agent.upn.reparameterize(mu, logvar)
-
-        # is this still needed?
-        action_latent_mean, action_latent_var = agent.get_transformed_action_distribution(z)
-        ppo_dist = Normal(action_latent_mean, torch.exp(action_latent_var))
+        action_mean, action_std = agent.actor_mean(z), agent.actor_logstd.exp()
+        ppo_dist = Normal(action_mean, torch.exp(action_std))
         kl_div = torch.distributions.kl_divergence(intention_dist, ppo_dist).mean()
         constraint_violation = F.relu(kl_div - epsilon_k)
     
@@ -625,11 +631,11 @@ if __name__ == "__main__":
                                                                          args.epsilon_k,
                                                                          intention_dist
                                                                          )
-                recon_loss, forward_loss, inverse_loss, consistency_loss, kl_loss = compute_upn_loss(agent.upn,
-                                                                                                     b_obs_imitate[mb_inds],
-                                                                                                     b_actions_imitate[mb_inds],
-                                                                                                     b_next_obs_imitate[mb_inds]
-                                                                                                     )
+                recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(agent.upn,
+                                                                                            b_obs_imitate[mb_inds],
+                                                                                            b_actions_imitate[mb_inds],
+                                                                                            b_next_obs_imitate[mb_inds]
+                                                                                            )
                 ppo_loss = (pg_loss -
                             args.ent_coef * entropy_loss +
                             v_loss * args.vf_coef +
@@ -640,8 +646,7 @@ if __name__ == "__main__":
                 upn_loss = args.upn_coef * (recon_loss +
                                             forward_loss +
                                             inverse_loss +
-                                            consistency_loss +
-                                            kl_loss * args.constrain_weights
+                                            consistency_loss
                                             )
                 
                 # PPO backward pass and optimization

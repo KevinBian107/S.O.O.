@@ -49,25 +49,24 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, args.exp_name, args.gamma) for i in range(args.num_envs)]
     )
 
-    # Load the FM-PPO model
+    # Load the SOF-PPO model
     sfmppo_agent = SFMPPOAgent(envs).to(device)
     sfmppo_path = os.path.join(os.getcwd(), "sfm", "params", "sfmppo/sfmppo_try.pth")
     sfmppo_agent.load_state_dict(torch.load(sfmppo_path, map_location=device))
 
     # Load the PPO model
     ppo_agent = PPOAgent(envs).to(device)
-    ppo_path = os.path.join(os.getcwd(), "sfm", "params", "ppo/ppo_no_flip_jump_intention.pth")
+    ppo_path = os.path.join(os.getcwd(), "sfm", "params", "ppo/ppo_hc_kl.pth")
     ppo_agent.load_state_dict(torch.load(ppo_path, map_location=device))
 
-    episode_num = 100
+    episode_num = 200
     sfmppo_returns = evaluate_model(sfmppo_agent, envs, device, num_episodes=episode_num)
     ppo_returns = evaluate_model(ppo_agent, envs, device, num_episodes=episode_num)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="SFM-PPO", marker='o')
+    plt.plot(range(1, len(sfmppo_returns)+1), sfmppo_returns, label="SOF-PPO", marker='o')
     plt.plot(range(1, len(ppo_returns)+1), ppo_returns, label="PPO", marker='o')
-    # plt.title("Episode Returns for PPO & SFM-PPO On 0.8 PA/POMDP, Change of Dynamics")
-    plt.title("Episode Returns for PPO & SFM-PPO On More Delayed Half-Cheetah Env")
+    plt.title("Episode Returns for Intention Constrain Models Evaluated in Intention Environment")
     plt.xlabel("Episode")
     plt.ylabel("Return")
     plt.legend()
