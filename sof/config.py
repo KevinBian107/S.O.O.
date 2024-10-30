@@ -118,9 +118,9 @@ class Args_test:
     cuda: bool = True
     gamma: float = 0.99
     num_envs: int = 1
-    test_episode_num: int = 200
+    test_episode_num: int = 100
     ppo_path: str = "ppo_hc_kl.pth"
-    sof_path: str = "sfmppo_try.pth"
+    sof_path: str = "sofppo_try.pth"
 
 # initiate
 args_sof = Args_sof()
