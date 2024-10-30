@@ -1,3 +1,6 @@
 __pycache__/
 **/videos/
 **/sfm/params
+**/sof/params
+**/sfm/data
+**/sof/data

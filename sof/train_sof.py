@@ -31,12 +31,12 @@ def train_sofppo_agent():
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs).to(args.device)
+    agent = Agent_sof(envs).to(args.device)
 
     # freeze_base_controller(agent)
     
     if args.load_sfmppo is not None:
-        save_dir = os.path.join(os.getcwd(), 'sfm', 'params')
+        save_dir = os.path.join(os.getcwd(), 'sof', 'params', 'sofppo')
         data_path = os.path.join(save_dir, args.load_sfmppo)
         if os.path.exists(data_path):
             print(f"Loading sfmppo model from {data_path}")
@@ -50,7 +50,7 @@ def train_sofppo_agent():
         # else:
             # Define the path to save and load UPN weights
             print('loaded params for supervised forward model')
-            model_dir = os.path.join(os.getcwd(), 'sfm', 'params')
+            model_dir = os.path.join(os.getcwd(), 'sof', 'params', 'supp')
             os.makedirs(model_dir, exist_ok=True)
             load_path = os.path.join(model_dir, args.load_upn)
             # Attempt to load UPN weights
@@ -361,11 +361,12 @@ def train_sofppo_agent():
     plt.show()
 
     # Save the model
-    save_dir = os.path.join(os.getcwd(), 'sfm', 'params')
+    save_dir1 = os.path.join(os.getcwd(), 'sof', 'params', 'sofppo')
+    save_dir2 = os.path.join(os.getcwd(), 'sof', 'params', 'sof')
     os.makedirs(save_dir, exist_ok=True)
 
-    data1_path = os.path.join(save_dir, args.save_sfmppo)
-    data2_path = os.path.join(save_dir, args.save_sfm)
+    data1_path = os.path.join(save_dir1, args.save_sfmppo)
+    data2_path = os.path.join(save_dir2, args.save_sfm)
 
     print('Saved at: ', data1_path)
     torch.save(agent.state_dict(), data1_path)

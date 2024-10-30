@@ -3,11 +3,62 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
 from scipy.optimize import minimize
 
-from config import args
+from config import args_sof, args_supp
+
+# --------------------------------------FOR-----SUPP-----MODELS--------------------------------------
+
+def load_supp_data(file_path):
+    '''Need to normalize the input, only for supp model'''
+    data = np.load(file_path)
+    states = torch.FloatTensor(data['states']).to(args_supp.device)
+    actions = torch.FloatTensor(data['actions']).to(args_supp.device)
+    next_states = torch.FloatTensor(data['next_states']).to(args_supp.device)
+
+    states = (states - states.mean()) / (states.std() + 1e-8)
+    actions = (actions - actions.mean()) / (actions.std() + 1e-8)
+
+    return states, actions, next_states
+
+def compute_supp_upn_loss(upn, state, action, next_state):
+    '''Compute loss only for supp model'''
+    z, z_next, z_pred, action_pred, state_recon, next_state_recon, next_state_pred = upn(state, action, next_state)
+    recon_loss = nn.MSELoss()(state_recon, state) + nn.MSELoss()(next_state_recon, next_state)
+    consistency_loss = nn.MSELoss()(next_state_pred, next_state)
+    forward_loss = nn.MSELoss()(z_pred, z_next.detach())
+    inverse_loss = nn.MSELoss()(action_pred, action)
+    total_loss = recon_loss + forward_loss + inverse_loss + consistency_loss
+    
+    latent_regularization = torch.mean(torch.norm(z, p=2, dim=-1)) + torch.mean(torch.norm(z_next, p=2, dim=-1))
+    total_loss += 0.01 * latent_regularization
+
+    l2_penalty = torch.mean(torch.norm(action_pred, p=2, dim=-1))
+    total_loss += inverse_loss + 0.01 * l2_penalty
+
+    return total_loss, recon_loss, forward_loss, inverse_loss, consistency_loss
+
+def plot_supp_losses(train_losses, val_losses):
+    '''plotting specifically for supp models'''
+    plt.figure(figsize=(15, 10))
+    loss_types = ['Total', 'Reconstruction', 'Forward', 'Inverse', 'Consistency']
+    for i, loss_type in enumerate(loss_types):
+        plt.subplot(2, 3, i+1)
+        plt.plot([losses[i] for losses in train_losses], label='Train')
+        plt.plot([losses[i] for losses in val_losses], label='Validation')
+        plt.title(f'{loss_type} Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+    plt.tight_layout()
+    plt.savefig('supervised_upn_vae.png')
+    plt.show()
+
+# --------------------------------------FOR-----SOF-----AND-----PPO-----MODELS--------------------------------------
+
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     '''Only on Actor Critic, instantiate layers'''
@@ -49,7 +100,7 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k):
         # eta_k = optimize_eta_k(state, advantage, base_dist, epsilon_k)
         # print(eta_k)
 
-        eta_k = args.eta_k
+        eta_k = args_sof.eta_k
 
         # Softened intention distribution using advantage weights
         weights = (advantage.view(-1, 1) / eta_k).exp()
@@ -129,11 +180,11 @@ def mixed_batch(ppo_states, ppo_actions, ppo_next_states):
     # Load imitation data
     save_dir = os.path.join(os.getcwd(), 'sfm', 'data')
     os.makedirs(save_dir, exist_ok=True)
-    data_path = os.path.join(save_dir, args.imitation_data_path)
+    data_path = os.path.join(save_dir, args_sof.imitation_data_path)
     imitation_data = np.load(data_path)
-    imitation_states = torch.FloatTensor(imitation_data['states']).to(args.device)
-    imitation_actions = torch.FloatTensor(imitation_data['actions']).to(args.device)
-    imitation_next_states = torch.FloatTensor(imitation_data['next_states']).to(args.device)
+    imitation_states = torch.FloatTensor(imitation_data['states']).to(args_sof.device)
+    imitation_actions = torch.FloatTensor(imitation_data['actions']).to(args_sof.device)
+    imitation_next_states = torch.FloatTensor(imitation_data['next_states']).to(args_sof.device)
 
     print(f'Mixing Imitation Data of Size: {imitation_states.shape[0]}')
 
