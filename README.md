@@ -1,4 +1,4 @@
-# Sub-optimal Forward Model
+# Constrained Sub-optimal Forward Model
 
 ## Context:
 The cerebellum have been long theorized to play an crucial rule in motor control and learning (Forward modeling). Corollary discharge encodes a efferent copy of the motor command to be processed to predict the consequences of actions before sensory feedback is available. Such process would help us predicts how the sensory state of our body will change and how should these actions be performed, achieving better performances in control.
