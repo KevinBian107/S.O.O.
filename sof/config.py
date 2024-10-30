@@ -27,28 +27,30 @@ class Args_sof:
     clip_vloss: bool = True
     ent_coef: float = 0.01
     vf_coef: float = 0.5
-    max_grad_norm: float = 0.5
-    upn_coef: float = 0.8
     kl_coef: float = 0.1
+    upn_coef: float = 0.8
+    max_grad_norm: float = 0.5
 
     # exactly how far we want distribution to be
-    # what's good for suboptimal
     epsilon_k: float = 0.01
+
+    # convex optimization yield approximately 1.0
     eta_k: float = 1.0
 
-    # when constrain_weights = 0, no constrain on MOMPO constrain
+    # when constrain_weights is zero, no EM constrain
     constrain_weights: float = 0.8
 
-    # this helps greatly for fmppo
+    # this helps greatly for sfmppo
+    imitation_data_path: str = None
     mix_coord: bool = False
     
-    # Data need to match up, this data may be problematic
+    # data need to match up, this data may be problematic
     load_upn: str = "supervised_vae_jump.pth"
 
     # can still use this becuase only load in PPO
     load_sfmppo: str = "sfmppo_stable.pth"
 
-    imitation_data_path: str = None
+    # save path
     save_sfm: str = "sof_try.pth"
     save_sfmppo: str = "sofppo_try.pth"
 
@@ -82,10 +84,11 @@ class Args_ppo:
     ent_coef: float = 0.01
     vf_coef: float = 0.5
     kl_coef: float = 0.1
-    target_kl: float = 0.01 # the targeted KL does work well
+    # the targeted KL does work well
+    target_kl: float = 0.01
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
-    load_model: str = None #"ppo_stable.pth"
+    load_model: str = None
     save_path: str = "ppo_jump_intention.pth"
 
     # to be filled in runtime
