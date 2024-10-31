@@ -54,8 +54,10 @@ Demonstartion of latent representation of agent during task
 ## Performance in Sensory Delayed Environment
 Simple testing in mimicing delayed sensory environment like in real life:
 
-<img src="../VNL-SFM/demos/website/delay_sensory_eval.png" alt="Delay sensory evals" width="500" height="300">
-
+<div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+  <img src="../VNL-SFM/demos/website/delay_sensory_eval.png" alt="Delay sensory evals" style="width: 100%; height: auto;">
+  <blockquote>Deep-RL SOF-PPO Half Cheetah agent evaluated on sensory delayed environment</blockquote>
+</div>
 
 ## Progress:
 
