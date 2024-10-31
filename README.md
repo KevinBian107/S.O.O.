@@ -40,29 +40,22 @@ SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to u
         </div>
 </div>
 
-<!-- <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-              <video controls autoplay style="width: 100%; height: auto;" muted>
-                <source src="../VNL-SFM/demos/website/acti_ppo.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
-              <blockquote>Deep-RL Half Cheetah agent trained using PPO Action Space & Action Activation PCA</blockquote>
-          </div> -->
-
-<!-- <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-              <video controls autoplay style="width: 100%; height: auto;" muted>
-                <source src="../VNL-SFM/demos/website/acti_sfmppo_kl.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
-              <blockquote>Deep-RL Half Cheetah agent trained using SFMPPO Latent Space & Action Activation PCA</blockquote>
-          </div>
+## Latent Created Example
+Demonstartion of latent representation of agent during task
 
 <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-              <video controls autoplay style="width: 100%; height: auto;" muted>
-                <source src="../VNL-SFM/demos/website/sfmppo_full.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
-              <blockquote>Deep-RL Half Cheetah agent trained using SFMPPO Full PCA</blockquote>
-          </div> -->
+  <video controls autoplay style="width: 100%; height: auto;" muted>
+    <source src="../VNL-SFM/demos/website/latent_demo.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+  </video>
+  <blockquote>Deep-RL SOF-PPO Half Cheetah agent trained and visualize with PCA</blockquote>
+</div>
+
+## Performance in Sensory Delayed Environment
+Simple testing in mimicing delayed sensory environment like in real life:
+
+<img src="../VNL-SFM/demos/website/delay_sensory_eval.png" alt="Delay sensory evals" width="500" height="300">
+
 
 ## Progress:
 

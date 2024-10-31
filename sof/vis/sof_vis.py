@@ -127,7 +127,9 @@ class EnhancedActivationVisualizer:
             while not next_done.all():
                 with torch.no_grad():
                     # Get latent representation
-                    z = self.agent.upn.encoder(next_obs)
+                    mu, logvar = self.agent.upn.encode(next_obs)
+                    # Reparameterize to sample z from the distribution
+                    z = self.agent.upn.reparameterize(mu, logvar)
                     collections['latents'].append(z.cpu().numpy())
                     
                     # Get action
@@ -227,7 +229,7 @@ class EnhancedActivationVisualizer:
             
             # Trajectory line
             self.trajectory_lines[space], = ax.plot(
-                [], [], 'r-', alpha=0.5, linewidth=1
+                [], [], 'r-', alpha=0.5, linewidth=3
             )
             
             # Add explained variance ratio to titles
@@ -256,19 +258,23 @@ class EnhancedActivationVisualizer:
     
     def update_visualization(self, obs, prev_obs=None, prev_action=None, episode_return=0):
         """Update visualizations with current state"""
+
+        # Changed code for VAE adaptation
         try:
             # Get current representations
             with torch.no_grad():
-                z = self.agent.upn.encoder(torch.Tensor(obs).to(self.device))
-                prev_z = self.agent.upn.encoder(torch.Tensor(prev_obs).to(self.device)) if prev_obs is not None else None
+                mu, logvar = self.agent.upn.encode(torch.Tensor(obs).to(self.device))
+                z = self.agent.upn.reparameterize(mu, logvar)
                 
+                if prev_obs is not None:
+                    prev_mu, prev_logvar = self.agent.upn.encode(torch.Tensor(prev_obs).to(self.device))
+                    prev_z = self.agent.upn.reparameterize(prev_mu, prev_logvar)
+                else:
+                    prev_z = None
+
                 # Get all network activations
                 if prev_z is not None and prev_action is not None:
-                    activations = self.get_network_activations(
-                        prev_z,
-                        torch.Tensor(prev_action).to(self.device),
-                        z
-                    )
+                    activations = self.get_network_activations(prev_z, torch.Tensor(prev_action).to(self.device), z)
                 else:
                     activations = self.get_network_activations(z)
                 
@@ -371,7 +377,7 @@ def main():
     visualizer = EnhancedActivationVisualizer(agent, envs, device)
     visualizer.setup_visualization()
     
-    num_episodes = 5
+    num_episodes = 10
     returns = []
     for episode in range(num_episodes):
         print(f"\nStarting Episode {episode + 1}/{num_episodes}")
