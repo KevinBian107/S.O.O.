@@ -87,7 +87,7 @@ def unfreeze_base_controller(agent):
         param.requires_grad = True
     agent.actor_logstd.requires_grad = True
 
-def compute_intention_action_distribution(agent, state, advantage, epsilon_k, eta_k):
+def compute_hidden_action_distribution(agent, state, advantage, epsilon_k, eta_k):
     """
     Compute the softened intention policy distribution (optimal action distribution) based on the current base policy and advantage values.
     This approximates the EM algorithm's expectation step, adjusting the policy softly towards higher-advantage actions.
@@ -104,13 +104,13 @@ def compute_intention_action_distribution(agent, state, advantage, epsilon_k, et
         weights = (advantage.view(-1, 1) / eta_k).exp()
         safe_stddev = torch.clamp(base_dist.stddev * weights, min=1e-6)
 
-        intention_dist = Normal(base_dist.mean * weights, safe_stddev)
+        hidden_dist = Normal(base_dist.mean * weights, safe_stddev)
         # print(base_dist.mean.shape)
     
-    return intention_dist
+    return hidden_dist
 
 
-def compute_lagrangian_kl_constraint(agent, state, eta_k, epsilon_k, intention_dist):
+def compute_lagrangian_kl_constraint(agent, state, eta_k, epsilon_k, hidden_dist):
     """Compute KL divergence between optimal "soften" intention disytribution and current base control policy distribution"""
     with torch.no_grad():
         # is this still needed?
@@ -119,7 +119,7 @@ def compute_lagrangian_kl_constraint(agent, state, eta_k, epsilon_k, intention_d
         z = agent.upn.reparameterize(mu, logvar)
         action_mean, action_std = agent.actor_mean(z), agent.actor_logstd.exp()
         ppo_dist = Normal(action_mean, torch.exp(action_std))
-        kl_div = torch.distributions.kl_divergence(intention_dist, ppo_dist).mean()
+        kl_div = torch.distributions.kl_divergence(hidden_dist, ppo_dist).mean()
         constraint_violation = F.relu(kl_div - epsilon_k)
     
     return eta_k * constraint_violation

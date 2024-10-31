@@ -95,7 +95,8 @@ def train_sofppo_agent():
         "forward_losses":[],
         "inverse_losses":[],
         "consist_losses":[],
-        "kl_constrained_penalty":[]
+        "kl_constrained_penalty":[],
+        "eta_k_loss":[]
     }
 
     next_obs, _ = envs.reset(seed=args_sof.seed)
@@ -217,18 +218,18 @@ def train_sofppo_agent():
 
                 eta_loss = compute_eta_k_loss(agent, b_advantages, args_sof.epsilon_k)
 
-                # Lagrangian Objective (Adjusted with KL Intention Distribution Constraint)
-                intention_dist = compute_intention_action_distribution(agent,
-                                                                       b_obs_imitate[mb_inds],
-                                                                       b_advantages[mb_inds],
-                                                                       args_sof.epsilon_k,
-                                                                       agent.eta_k
-                                                                       )
+                # Lagrangian Objective (Adjusted with KL Hidden Distribution Constraint)
+                hidden_dist = compute_hidden_action_distribution(agent,
+                                                                b_obs_imitate[mb_inds],
+                                                                b_advantages[mb_inds],
+                                                                args_sof.epsilon_k,
+                                                                agent.eta_k
+                                                                )
                 kl_constraint_penalty = compute_lagrangian_kl_constraint(agent,
                                                                          b_obs_imitate[mb_inds],
                                                                          agent.eta_k,
                                                                          args_sof.epsilon_k,
-                                                                         intention_dist
+                                                                         hidden_dist
                                                                          )
                 recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(agent.upn,
                                                                                             b_obs_imitate[mb_inds],
@@ -302,6 +303,7 @@ def train_sofppo_agent():
         metrics["entropies"].append(entropy_loss.item())
         metrics["approx_kls"].append(approx_kl.item())
         metrics["kl_constrained_penalty"].append(kl_constraint_penalty.item())
+        metrics["eta_k_loss"].append(eta_loss.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
 
@@ -361,6 +363,7 @@ def train_sofppo_agent():
     plt.plot(metrics["inverse_losses"], label='Inverse Loss')
     plt.plot(metrics["recon_losses"], label='Reconstruction Loss')
     plt.plot(metrics["consist_losses"], label='Consistency Loss')
+    plt.plot(metrics["eta_k_loss"], label='Eta K Loss')
     plt.title('Losses')
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
