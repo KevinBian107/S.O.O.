@@ -1,5 +1,8 @@
 # VNL Sub-optimality Forward Model
 
+## Analogy:
+Mountains after mountains: Every agent that learns in different world serves as a constraint for each other. They explore the world from their own perspective and “pull” each other on the way to prevent any one of them from falling into the “local optimality illusion” that one sees in one moment.
+
 ## Context:
 The cerebellum have been long theorized to play an crucial rule in motor control and learning (Forward modeling). Corollary discharge encodes a efferent copy of the motor command to be processed to predict the consequences of actions before sensory feedback is available. Such process would help us predicts how the sensory state of our body will change and how should these actions be performed, achieving better performances in control.
 
