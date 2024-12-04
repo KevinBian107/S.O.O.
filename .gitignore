@@ -4,5 +4,5 @@ __pycache__/
 **/sof/params
 **/sfm/data
 **/sof/data
-**/demos/
+**demos/
 **site/
