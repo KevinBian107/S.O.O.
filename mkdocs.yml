@@ -142,6 +142,9 @@ extra:
 # extra_css:
 #   - css/mkdocstrings.css
 
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML
+
 copyright: >
   Copyright &copy; 2024 Kaiwen Bian –
   <a href="#__consent">Change cookie settings</a>
