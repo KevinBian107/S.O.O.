@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://kbian.org/VNL-SoFM/progress/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Progress - SoFM Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+        <link href="../css/version-select.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Progress";
+        var mkdocs_page_input_path = "progress.md";
+        var mkdocs_page_url = "/VNL-SoFM/progress/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SoFM Documentation
+        </a>
+        <div class="version">
+          {'provider': 'mike'}
+        </div><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Why SoFM?</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Progress</a>
+    <ul class="current">
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SoFM Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Progress</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/KevinBian107/VNL-SoFM/edit/master/docs/progress.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="sfm-ppo-sofm-ppo-control-examples">SFM-PPO &amp; SoFM-PPO Control Examples<a class="headerlink" href="#sfm-ppo-sofm-ppo-control-examples" title="Permanent link">&para;</a></h2>
+<p>SFM-PPO is a vriant of PPO where an Supervised Forward Model (SFM) is added to understand the dynamics of teh environment amd SoFM-PPO is a variant of PPO (Sub-Optimal Forward Model) as well where instead of just the SFM, the model is also trained to find "local minimum" or sub-optimal minimum in one task in order for completions in more than just one task. The below are a few Deep-RL Half Cheetah agent demos:</p>
+<div style="width: 100%; padding: 5px; display: flex; justify-content: center; gap: 20px;">
+          <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
+            <video controls autoplay style="width: 100%; height: auto;" muted>
+              <source src="../website/ppo_jump_weird.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <blockquote>Trained using PPO on "Jump Task" and stuck on weird local minimum</blockquote>
+          </div>
+          <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
+            <video controls autoplay style="width: 100%; height: auto;" muted>
+              <source src="../website/sfmppo_converge_712.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <blockquote>Trained using SFM-PPO on "Normal Running Task"</blockquote>
+          </div>
+        <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
+            <video controls autoplay style="width: 100%; height: auto;" muted>
+              <source src="../website/sofppo_demo1.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <blockquote>Trained using SoFM-PPO on "Normal Running Task" but with world model intention bounding</blockquote>
+        </div>
+</div>
+
+<h2 id="latent-created-example">Latent Created Example<a class="headerlink" href="#latent-created-example" title="Permanent link">&para;</a></h2>
+<p>Demonstartion of latent representation of agent during task</p>
+<div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+  <video controls autoplay style="width: 100%; height: auto;" muted>
+    <source src="../website/latent_demo.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+  </video>
+  <blockquote>Deep-RL SoFM-PPO Half Cheetah agent trained and visualize with PCA</blockquote>
+</div>
+
+<h2 id="performance-in-sensory-delayed-environment">Performance in Sensory Delayed Environment<a class="headerlink" href="#performance-in-sensory-delayed-environment" title="Permanent link">&para;</a></h2>
+<p>Simple testing in mimicing delayed sensory environment like in real life:</p>
+<div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+  <img src="../website/delay_sensory_eval.png" alt="Delay sensory evals" style="width: 100%; height: auto;">
+  <blockquote>Deep-RL SoFM-PPO Half Cheetah agent evaluated on sensory delayed environment</blockquote>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Why SoFM?"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>Copyright &copy; 2024 Kaiwen Bian – <a href="#__consent">Change cookie settings</a>
+</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/KevinBian107/VNL-SoFM" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+      <script src="../js/version-select.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
