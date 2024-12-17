@@ -51,6 +51,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#sfm-sofm-system-overview">SFM &amp; SoFM System Overview</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#question-trying-to-solve">Question Trying to Solve</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#analogy">Analogy</a>
     </li>
     </ul>
@@ -84,8 +86,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="supervised-sub-optimality-forward-model">Supervised &amp; Sub-optimality Forward Model<a class="headerlink" href="#supervised-sub-optimality-forward-model" title="Permanent link">&para;</a></h1>
-<p>I am currently researching into the theoretical aspects of <strong>Continual Learning</strong> and <strong>Transfer Learning</strong> with advising from professor <a href="https://talmopereira.com/" target="_blank">Talmo Pereira</a> in the Salk Institute. I try to frame the general problem of Continual Learning from the perspective of Reinforcement Learning &amp; Cognitive Neuroscience, hoping to develop algorithms that utilize the same strategies of "how we learn" onto an artificial agent. Moreover, I hope that such development can serve more than an engineering improvmenet, but rather contributing back to the neuroscience community to understand more about ourselves.</p>
+                <h1 id="sub-optimality-forward-model">Sub-optimality Forward Model<a class="headerlink" href="#sub-optimality-forward-model" title="Permanent link">&para;</a></h1>
+<p>I am currently researching into the theoretical aspects of <strong>Continual Learning</strong> and <strong>Transfer Learning</strong> with advising from professor <a href="https://talmopereira.com/" target="_blank">Talmo Pereira</a> in the Salk Institute and professor <a href="https://scungao.github.io/" target="_blank">Sichun Gao</a> from UCSD Computer Science &amp; Engineering Department. I try to frame the general problem of Continual Learning from the perspective of Reinforcement Learning &amp; Cognitive Neuroscience, hoping to develop algorithms that utilize the same strategies of "how we learn" onto an artificial agent. Moreover, I hope that such development can serve more than an engineering improvmenet, but rather contributing back to the neuroscience community to understand more about ourselves.</p>
 <p>I am developing a conceptual framework that may be used for families of algorithms and I am trying to build internal representations for artificial agents through designing a <strong>Forward Model</strong>, one similar to
 what we think the Cerabellum is doing in human brain, so their learned skills in one task can be modularized and transferable to other control tasks. The belows are some training results on classical control problems using 
 our <strong>SoFM-PPO</strong> algorithm (an adaptation using Supervised Forward Model and Proximal Policy Optimization).</p>
@@ -93,22 +95,51 @@ our <strong>SoFM-PPO</strong> algorithm (an adaptation using Supervised Forward 
 <p>The cerebellum have been long theorized to play an crucial rule in motor control and learning (Forward modeling). Corollary discharge encodes a efferent copy of the motor command to be processed to predict the consequences of actions before sensory feedback is available. Such process would help us predicts how the sensory state of our body will change and how should these actions be performed, achieving better performances in control.</p>
 <p>Using examples from (Albert and Shadmehr, 2018), with the starting and ending positions in hand, the parietal regions of your cerebral cortex compute the path of the arm that connects these positions in space the trajectory of the movement. After the trajectory is determined, your primary motor cortex and other associated pre-motor areas then carefully transform this sensory signal into a motor plan, namely the patterns of muscle contraction that will move your arm along the desired path towards the coffee.</p>
 <h2 id="sfm-sofm-system-overview">SFM &amp; SoFM System Overview<a class="headerlink" href="#sfm-sofm-system-overview" title="Permanent link">&para;</a></h2>
-<p>This is an overview of our model:</p>
+<p>Still working on it, but this is a rough idea of how th  forward model system would look like</p>
 <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
   <img src="website/dynamics_model.png" alt="schematics" style="width: 100%; height: auto;">
   <blockquote>Schematics for Forward Models</blockquote>
 </div>
 
+<h2 id="question-trying-to-solve">Question Trying to Solve<a class="headerlink" href="#question-trying-to-solve" title="Permanent link">&para;</a></h2>
+<h3 id="algorithmic-related-questions">Algorithmic Related Questions:<a class="headerlink" href="#algorithmic-related-questions" title="Permanent link">&para;</a></h3>
+<p>With just an change of the understanding for the rules of the world (intention changes), can I still find a sub-optimal point in this training world such that it works still fine or even better than solely one-world-model trained agent in the other world?</p>
+<p>Can I bake in the idea of having a world model into the algorithm itself, not just using networks. <strong><em>There is a theoritical perspective from EM, and then there is a practical perspective of how can we do it from constraint optimization</em></strong>. Here is a few question that I want to answer:</p>
+<ol>
+<li>
+<p>Can the q distribution be an generalzied instance of the world model?</p>
+<ul>
+<li>We need to change the fundamental constrained optimization's formulation from MOMPO. What if I say q not as a action distribution but a latent distribution in the VAE, then we add KL as a constraint on the VAE latent distribtion at each iteration, gradually constructing q.</li>
+<li>Maybe use ideas from information bottleneck? VAE is the variational inference derived from doing EM, but it can also be framed into a <strong><em>constraint optimization</em></strong> directly where decoder optimize y matching from z and encoder is the constraint to match q|z to z. This constructs a latent that captures something in the distribution when using learning algorithms like PPO.</li>
+<li>Now I want to do another EM constraint optimization while doing ppo, need to derive the ELBO for so. Isn't VAE already doing so? Isn't MPO just VAE but optimizing using RL idea and q is no longer latent but action? <strong><em>Can I still construct q as a latent?</em></strong> Would this be a hard ELBO to prove?</li>
+<li>It's a MinMax Lagrangian duality optimization problem.</li>
+</ul>
+</li>
+<li>
+<p>Can I have the ppo policy sample under the distribution of the world model?</p>
+</li>
+<li>Can I gradually estimate (or expand) the world model based on the information we are having?</li>
+<li>Can I derive an ELBO for it?</li>
+<li>Can I still use the explicit representation of the forward model, can I use the transfered core?</li>
+</ol>
+<h3 id="biologically-related-questions">Biologically Related Questions:<a class="headerlink" href="#biologically-related-questions" title="Permanent link">&para;</a></h3>
+<p>Does establishing a Forward Model (instance of a world model), similar to the Cerebellum's function, facilitate motor action execution by providing a motor plan derived from previous motor control experiences for additional guidance (compare to pure sensory feedback like in model-free RL)? Moreover, can this new motor learning process be incorporated into the GDP for future motor controls?</p>
+<ul>
+<li>Objective 1: See if such biologically inspired strategy (for example, maybe using mechanistic insight, maybe using neuronal representation as inductive biases) improves performance.</li>
+<li>Objective 2: See if the Forward Model would resemble functionality and behavior of the cerebellum (for example, showing gradual learning of new motor skills).</li>
+<li>Idealy using a more biological realistic model with more biological realistic task such as the rodent model in VNL.</li>
+</ul>
 <h2 id="analogy">Analogy<a class="headerlink" href="#analogy" title="Permanent link">&para;</a></h2>
+<p>The below is a few different ways of how I like to interpret our works.</p>
 <h3 id="mountains-after-mountains">Mountains After Mountains<a class="headerlink" href="#mountains-after-mountains" title="Permanent link">&para;</a></h3>
 <p>Every agent that learns in different world serves as a constraint for each other. They explore the world from their own perspective and “pull” each other on the way to prevent any one of them from falling into the “local optimality illusion” that one sees in one moment.</p>
 <h3 id="wold-model">Wold Model<a class="headerlink" href="#wold-model" title="Permanent link">&para;</a></h3>
-<p>We believe that policy is to a task specific, but if we build an reward model or an world model, such model may be agonist of the environment or the task, achieveing continual learning purpose.</p>
+<p>We believe that policy is to a task specific, but if we build an <strong><em>reward model</em></strong> or an <strong><em>world model</em></strong>, such model may be agonist of the environment or the task, achieveing continual learning purpose. The question becomes how can we build such representation? Through <strong><em>latent space</em></strong> and <strong><em>modifying architecture</em></strong>? By modifying the <strong><em>training/learning algorithm</em></strong> and the <strong><em>fundamental way tha egnt learn things</em></strong>?</p>
 <h3 id="constraint-solving">Constraint Solving<a class="headerlink" href="#constraint-solving" title="Permanent link">&para;</a></h3>
-<p>Such a forward model can be interpreted in various ways from a constraint solving perspective:</p>
+<p>Our Sub-optimality Forward Model can be interpreted in various ways from a constraint solving perspective:</p>
 <ol>
-<li>We can consider such model as a constrained process, forcing the agent to learn while incorporating its previous experiences.</li>
-<li>Similarly, the forward model's facilitation does not come directly from action facilitation but rather from providing a better representation of the feature space <span class="arithmatex">\(\vec \phi(\vec x)\)</span> that the agent has built up.</li>
+<li>We can consider such model as a constrained process, forcing the agent to learn while incorporating its previous experiences or <strong>sampling under the expectation of previous world models*</strong>.</li>
+<li>The forward model's facilitation does not come directly from action facilitation but rather from providing a better representation of the feature space <span class="arithmatex">\(\vec \phi(\vec x)\)</span> that the agent has built up.</li>
 </ol>
 <p>It's about operating in this <strong>imaginary state</strong>. It is never about <strong>explicitly</strong> facilitating actions but rather <strong>implicitly</strong> making the model understand the dynamics and interactions in this space more comprehensively.</p>
               
@@ -167,5 +198,5 @@ our <strong>SoFM-PPO</strong> algorithm (an adaptation using Supervised Forward 
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2024-12-05 20:15:49.074870+00:00
+Build Date UTC : 2024-12-17 01:27:05.496421+00:00
 -->
