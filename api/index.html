@@ -110,7 +110,7 @@ and activate the conda environment by:
 <p>All the configurations are in the <a href="https://github.com/KevinBian107/S.O.O./blob/main/sof/config.py">config python file</a></p>
 </li>
 <li>
-<p>I have established a few training script for training S.O.O.</p>
+<p>We established a few training script for training S.O.O.</p>
 <ul>
 <li>
 <p>Training a plain PPO with customized hyperparemetr specified in the configs:
@@ -135,9 +135,28 @@ and activate the conda environment by:
 </ul>
 </li>
 <li>
-<p>I have created numerous testing functions and visualization function, writing this later.</p>
+<p>We have created numerous testing functions and visualization function, including:</p>
+<ul>
+<li>
+<p>Testing functions on specified environmental conditions, which takes in configs in the config file as well:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Visualization of the latent representation of gait cycle, depending on either ppo or soo is used, the code is different:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">ppo_vis</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div>
+and
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">sof_vis</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Still working on evaluation pipeline of full continual learning problem.</p>
+</li>
+</ul>
 </li>
 </ol>
+<p>Still working on implementing other base comparison algorithms (model-based, sac, mompo, ...)</p>
               
             </div>
           </div><footer>
