@@ -91,7 +91,7 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="sub-optimality-optimization-soo">Sub-Optimality Optimization (S.O.O)<a class="headerlink" href="#sub-optimality-optimization-soo" title="Permanent link">&para;</a></h1>
-<p>To me, I feel like the traditional perspective of continual learning has always been deem as the process of doing 2 things: "how to preerve more when learning a new task (memory stability)" and "how to even learn under this condition (memory plasticity)".  However, I would like to deem the problem of CL from a different perspective. I would define the problem of CL as:</p>
+<p>To me, I feel like the traditional perspective of continual learning has always been deem as the process of doing 2 things: "how to preserve more when learning a new task (memory stability)" and "how to even learn under this condition (memory plasticity)".  However, I would like to deem the problem of CL from a different perspective. I would define the problem of CL as:</p>
 <p><code>Learning the best action to take given that we are in a specific condition.</code></p>
 <p>Each tasks is sort of <code>chained</code> together to form a harder problem that we are trying to solve. With this formulation, we are breaking the problem into two parts (goes with the overall workflow of EM algorithm) where one part (VAE) focuses on creating a cohesive picture of various environment (creating the picture of the "bigger" environment) and the other (Model-free RL) searches given a niche projection, or an instance, of the "bigger" environment.</p>
 <ol>
@@ -104,6 +104,8 @@
 <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
   <img src="website/dynamics_model.png" alt="schematics" style="width: 100%; height: auto;">
 </div>
+
+<p>*This research project is intended to be an attempt to push a little bit more on building the theoritical construct of <code>creatiung models of the world</code>, the codebase is intended for an empirical testing method of seeing our idea.</p>
               
             </div>
           </div><footer>
@@ -160,5 +162,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-01-09 20:33:56.847816+00:00
+Build Date UTC : 2025-01-09 20:56:56.596299+00:00
 -->
