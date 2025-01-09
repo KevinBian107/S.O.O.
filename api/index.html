@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://kbian.org/S.O.O./api/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>API Calls - S.O.O. Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+        <link href="../css/version-select.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "API Calls";
+        var mkdocs_page_input_path = "api.md";
+        var mkdocs_page_url = "/S.O.O./api/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> S.O.O. Documentation
+        </a>
+        <div class="version">
+          {'provider': 'mike'}
+        </div><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Introduction</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../inspirations/">Inspirations</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">API Calls</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#setting-up">Setting Up</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#training-soo">Training S.O.O.</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../next/">Next Steps</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../progress/">Preliminaries</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">S.O.O. Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">API Calls</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/KevinBian107/S.O.O./edit/master/docs/api.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-calls">API Calls<a class="headerlink" href="#api-calls" title="Permanent link">&para;</a></h1>
+<p>This is the documentation of how API works in this system.</p>
+<h2 id="setting-up">Setting Up<a class="headerlink" href="#setting-up" title="Permanent link">&para;</a></h2>
+<p>Create the conda environment and download all  the dependencies by:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">conda</span> <span class="n">env</span> <span class="n">create</span>
+</code></pre></div>
+and activate the conda environment by:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">conda</span> <span class="n">activate</span> <span class="n">soo</span>
+</code></pre></div></p>
+<h2 id="training-soo">Training S.O.O.<a class="headerlink" href="#training-soo" title="Permanent link">&para;</a></h2>
+<p>This is how to train S.O.O. on your local computer with CPU. All configurrations are specified in the config files.</p>
+<ol>
+<li>
+<p>All the configurations are in the <a href="https://github.com/KevinBian107/S.O.O./blob/main/sof/config.py">config python file</a></p>
+</li>
+<li>
+<p>I have established a few training script for training S.O.O.</p>
+<ul>
+<li>
+<p>Training a plain PPO with customized hyperparemetr specified in the configs:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_ppo</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Training just S.O.O. with either with or without the pre-trained core (specify in the configs):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_soo</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Training just the transfered SOF core with intention data specified in the config path:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_supp</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Training the full pipeline all at once:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train</span><span class="o">.</span><span class="n">py</span>
+</code></pre></div></p>
+</li>
+</ul>
+</li>
+<li>
+<p>I have created numerous testing functions and visualization function, writing this later.</p>
+</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../inspirations/" class="btn btn-neutral float-left" title="Inspirations"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../next/" class="btn btn-neutral float-right" title="Next Steps">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>Copyright &copy; 2024 Kaiwen Bian
+</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/KevinBian107/S.O.O." class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../inspirations/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../next/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+      <script src="../search/main.js"></script>
+      <script src="../js/version-select.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
