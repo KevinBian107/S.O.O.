@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Args_sof:
-    exp_name: str = "sofppo_halfcheetah"
+    exp_name: str = "soo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     device: str = 'cpu'
     total_timesteps: int = 2000000
@@ -44,14 +44,14 @@ class Args_sof:
     mix_coord: bool = False
     
     # data need to match up, this data may be problematic
-    load_upn: str = "supervised_vae_jump.pth"
+    load_upn: str = "supervised_wm.pth"
 
     # can still use this becuase only load in PPO
     load_sfmppo: str = "sfmppo_stable.pth"
 
     # save path
-    save_sfm: str = "sof_try.pth"
-    save_sfmppo: str = "sofppo_try.pth"
+    save_sfm: str = "sof_trained.pth"
+    save_sfmppo: str = "sooppo_trained.pth"
 
     # to be set at runtime
     batch_size: int = 0 
@@ -105,7 +105,8 @@ class Args_supp:
     num_epochs: int = 100
     cuda: bool = True
     imitate_data_path: str = 'imitate_ppo_hard_jump_intention.npz'
-    save_supp_path: str = "supervised_vae_jump.pth"
+    save_supp_path: str = Args_sof().load_upn
+    device: str = 'cpu'
 
 @dataclass
 class Args_test:

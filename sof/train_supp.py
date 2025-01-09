@@ -20,7 +20,8 @@ def train_model(model, dataloader, optimizer):
     total_consistency_loss = 0
     for states, actions, next_states in dataloader:
         optimizer.zero_grad()
-        loss, recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(model, states, actions, next_states)
+        recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(model, states, actions, next_states)
+        loss = recon_loss + forward_loss + inverse_loss + consistency_loss
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -41,7 +42,8 @@ def validate_model(model, dataloader):
     total_consistency_loss = 0
     with torch.no_grad():
         for states, actions, next_states in dataloader:
-            loss, recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(model, states, actions, next_states)
+            recon_loss, forward_loss, inverse_loss, consistency_loss = compute_upn_loss(model, states, actions, next_states)
+            loss = recon_loss + forward_loss + inverse_loss + consistency_loss
             total_loss += loss.item()
             total_recon_loss += recon_loss.item()
             total_forward_loss += forward_loss.item()
@@ -51,7 +53,7 @@ def validate_model(model, dataloader):
             total_forward_loss / len(dataloader), total_inverse_loss / len(dataloader),
             total_consistency_loss / len(dataloader))
 
-if __name__ == "__main__":
+def train_supp():
     device = torch.device("cuda" if torch.cuda.is_available() and args_supp.cuda else "cpu")
     save_dir = os.path.join(os.getcwd(), 'sof', 'data')
     os.makedirs(save_dir, exist_ok=True)
@@ -96,10 +98,13 @@ if __name__ == "__main__":
         print(f"Train - Total: {train_loss[0]:.4f}, Recon: {train_loss[1]:.4f}, Forward: {train_loss[2]:.4f}, Inverse: {train_loss[3]:.4f}, Consistency: {train_loss[4]:.4f}")
         print(f"Val   - Total: {val_loss[0]:.4f}, Recon: {val_loss[1]:.4f}, Forward: {val_loss[2]:.4f}, Inverse: {val_loss[3]:.4f}, Consistency: {val_loss[4]:.4f}")
 
-    plot_supp_losses(train_losses, val_losses)
+    # plot_supp_losses(train_losses, val_losses)
 
     save_dir = os.path.join(os.getcwd(), 'sof', 'params', 'supp')
     os.makedirs(save_dir, exist_ok=True)
     model_path = os.path.join(save_dir, args_supp.save_supp_path)
     torch.save(model.state_dict(), model_path)
     print(f"Model saved at: {model_path}")
+    
+if __name__ == "__main__":
+    train_supp()

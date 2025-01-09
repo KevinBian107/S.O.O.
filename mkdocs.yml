@@ -1,6 +1,6 @@
-site_name: SoFM Documentation
-site_url: https://kbian.org/VNL-SoFM
-repo_url: https://github.com/KevinBian107/VNL-SoFM
+site_name: S.O.O. Documentation
+site_url: https://kbian.org/S.O.O./
+repo_url: https://github.com/KevinBian107/S.O.O.
 
 theme:
   name: readthedocs
@@ -151,5 +151,6 @@ copyright: >
 nav:
   - Introduction: index.md
   - Inspirations: inspirations.md
+  - API Calls: api.md
   - Next Steps: next.md
   - Preliminaries: progress.md

@@ -14,8 +14,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         else:
             env = gym.make(env_id)
         
-        env = TargetVelocityWrapper(env, target_velocity=2.0)
-        env = JumpRewardWrapper(env, jump_target_height=2.0)
+        # env = TargetVelocityWrapper(env, target_velocity=2.0)
+        # env = JumpRewardWrapper(env, jump_target_height=2.0)
         # env = PartialObservabilityWrapper(env=env, observable_ratio=0.2)
         # env = ActionMaskingWrapper(env=env, mask_prob=0.2)
         # env = DelayedRewardWrapper(env, delay_steps=20)

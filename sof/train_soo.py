@@ -65,8 +65,6 @@ def train_sofppo_agent():
     # Optimizer for UPN
     upn_optimizer = optim.Adam(agent.upn.parameters(), lr=args_sof.upn_learning_rate, eps=1e-5)
 
-    eta_optimizer = optim.Adam([agent.eta_k], lr=args_sof.eta_learning_rate, eps=1e-5)
-
     # ALGO Logic: Storage setup
     obs = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_observation_space.shape).to(args_sof.device)
     actions = torch.zeros((args_sof.num_steps, args_sof.num_envs) + envs.single_action_space.shape).to(args_sof.device)
