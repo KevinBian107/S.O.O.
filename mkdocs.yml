@@ -146,16 +146,10 @@ extra_javascript:
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML
 
 copyright: >
-  Copyright &copy; 2024 Kaiwen Bian –
-  <a href="#__consent">Change cookie settings</a>
+  Copyright &copy; 2024 Kaiwen Bian
 
 nav:
-  - Why SoFM?: index.md
-  - Progress: progress.md
-  # - Examples: examples.md
-  # - Changelog: changelog.md
-  # - Releases: https://github.com/talmolab/sleap-io/releases
-  # - Core API:
-  #   - Model: model.md
-  #   - Formats: formats.md
-  # - Full API: reference/
+  - Introduction: index.md
+  - Inspirations: inspirations.md
+  - Next Steps: next.md
+  - Preliminaries: progress.md
