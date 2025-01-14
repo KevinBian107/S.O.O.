@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class Args_sof:
     exp_name: str = "soo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
-    device: str = 'cpu'
+    device: str = "cpu"
     total_timesteps: int = 2000000
     torch_deterministic: bool = True
     cuda: bool = True
@@ -42,7 +43,7 @@ class Args_sof:
     # this helps greatly for sfmppo
     imitation_data_path: str = None
     mix_coord: bool = False
-    
+
     # data need to match up, this data may be problematic
     load_upn: str = "supervised_wm.pth"
 
@@ -54,9 +55,10 @@ class Args_sof:
     save_sfmppo: str = "sooppo_trained.pth"
 
     # to be set at runtime
-    batch_size: int = 0 
+    batch_size: int = 0
     minibatch_size: int = 0
     iterations: int = 0
+
 
 @dataclass
 class Args_ppo:
@@ -65,7 +67,7 @@ class Args_ppo:
     torch_deterministic: bool = True
     cuda: bool = True
     env_id: str = "HalfCheetah-v4"
-    device: str = 'cpu'
+    device: str = "cpu"
     capture_video: bool = True
     total_timesteps: int = 2000000
     learning_rate: float = 1e-5
@@ -95,6 +97,7 @@ class Args_ppo:
     minibatch_size: int = 0
     num_iterations: int = 0
 
+
 @dataclass
 class Args_supp:
     total_timesteps: int = 1000000
@@ -104,9 +107,10 @@ class Args_supp:
     latent_size: int = 100
     num_epochs: int = 100
     cuda: bool = True
-    imitate_data_path: str = 'imitate_ppo_hard_jump_intention.npz'
+    imitate_data_path: str = "imitate_ppo_hard_jump_intention.npz"
     save_supp_path: str = Args_sof().load_upn
-    device: str = 'cpu'
+    device: str = "cpu"
+
 
 @dataclass
 class Args_test:
@@ -121,6 +125,7 @@ class Args_test:
     test_episode_num: int = 100
     ppo_path: str = "ppo_hc_kl.pth"
     sof_path: str = "sofppo_try.pth"
+
 
 # initiate
 args_sof = Args_sof()
