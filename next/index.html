@@ -35,7 +35,7 @@
           <a href=".." class="icon icon-home"> S.O.O. Documentation
         </a>
         <div class="version">
-          {'provider': 'mike'}
+          {'provider': 'Kaiwen Bian'}
         </div><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,8 +59,6 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Next Steps</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#literature-reviews-mathamatical-formulations">Literature Reviews &amp; Mathamatical Formulations</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#more-questions">More Questions</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#code-base-experiments">Code Base &amp; Experiments:</a>
@@ -97,27 +95,13 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="some-next-steps">Some Next Steps<a class="headerlink" href="#some-next-steps" title="Permanent link">&para;</a></h1>
-<h2 id="literature-reviews-mathamatical-formulations">Literature Reviews &amp; Mathamatical Formulations<a class="headerlink" href="#literature-reviews-mathamatical-formulations" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p>Need to do more literature reviews:</p>
-<ul>
-<li>How can we keep things in a neural network using perhaps transfer learning technqiues.</li>
-<li>How should we represent these features that we learned about the enviornment? Latent? Distribution?</li>
-</ul>
-</li>
-<li>
-<p>Need to revise the <a href="https://www.overleaf.com/project/6767952de5a1d02f91e9765d">mathamatical formulation</a>.</p>
-<ul>
-<li>Attempt to derive from MOMPO <a href="https://www.overleaf.com/project/671d900be2bfd3dd5cb080ad">here</a></li>
-</ul>
-</li>
-</ol>
 <h2 id="more-questions">More Questions<a class="headerlink" href="#more-questions" title="Permanent link">&para;</a></h2>
-<p>There are 2 questions to solve (one easy and one hard):
-- The easy one is doing constraint optimization on model-free algorithm families.
-- The hard one is to reformulate this problem theoritically.</p>
-<ol>
+<p>There are 2 questions to solve (one easy and one hard):</p>
+<ul>
+<li>The easy one is doing constraint optimization on model-free algorithm families.</li>
+<li>
+<p>The hard one is to reformulate this problem theoritically.</p>
+</li>
 <li>
 <p>Harder question to solve:</p>
 <ul>
@@ -126,6 +110,9 @@
 </li>
 <li>
 <p>We need to change the fundamental constrained optimization's formulation from MOMPO. What if I say <span class="arithmatex">\(q\)</span> distribution not as a action distribution (in MOMPO) but a latent distribution in the VAE (representing the model of the environment), then we add KL as a constraint on the VAE latent distribtion at each iteration, gradually constructing <span class="arithmatex">\(q\)</span>. Can we still derive an ELBO for it (new MinMax Lagrangian duality optimization problem).</p>
+</li>
+<li>
+<p>Need to revise the <a href="https://www.overleaf.com/project/6767952de5a1d02f91e9765d">mathamatical formulation</a>. Attempt to derive from MOMPO <a href="https://www.overleaf.com/project/671d900be2bfd3dd5cb080ad">here</a></p>
 </li>
 </ul>
 </li>
@@ -140,21 +127,13 @@
 <li>
 <p>With an change of the understanding for the rules of the world, can the algorithm still find a sub-optimal point in this training world such that it works still fine or even better than solely one-world-model trained agent in the other world?</p>
 </li>
-</ol>
+</ul>
 <h2 id="code-base-experiments">Code Base &amp; Experiments:<a class="headerlink" href="#code-base-experiments" title="Permanent link">&para;</a></h2>
-<p>Implementation notes in <a href="https://www.overleaf.com/project/66fb25eba3b019bbbbff1497">here</a></p>
-<ol>
-<li>
-<p>Adapt the motor control task of switching intention to the Atari game setting.</p>
-</li>
-<li>
-<p>Need to consider what phenomenon we would see when our idea actually works? Need a good testing paradigm.</p>
+<p>Implementation notes in <a href="https://www.overleaf.com/project/66fb25eba3b019bbbbff1497">here</a>. We need to consider what phenomenon we would see when our idea actually works? Need a good testing paradigm.</p>
 <ul>
 <li>Easier and easier to learn new things? The model should develope an intuition of the enviornment and learn better when seeing similar environment? Learning a combined skill set from previous experiences of smaller skills that can be transferable should be easier?</li>
 <li>Being able to transfer back and have memory retention?</li>
 </ul>
-</li>
-</ol>
               
             </div>
           </div><footer>
