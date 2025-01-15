@@ -6,7 +6,7 @@ class Args_sof:
     exp_name: str = "soo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     device: str = "cpu"
-    total_timesteps: int = 1000  # 1000000
+    total_timesteps: int = 1000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -38,7 +38,7 @@ class Args_sof:
     epsilon_k: float = 0.01
 
     # when constrain_weights is zero, no EM constrain
-    constrain_weights: float = 0.8
+    constrain_weights: float = 0.5
 
     # this helps greatly for sfmppo
     imitation_data_path: str = None
