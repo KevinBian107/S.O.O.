@@ -422,7 +422,7 @@ def train_sofppo_agent(envs=None):
 
     plt.tight_layout()
     plt.savefig("sofppo_vae_constrained.png")
-    plt.show()
+    # plt.show()
 
     # Save the model
     soo_save_dir1 = os.path.join(os.getcwd(), "params", "multi_task", "soo_ppo")

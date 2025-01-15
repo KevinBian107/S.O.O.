@@ -11,15 +11,20 @@ from collections import deque
 import random
 
 class FlipRewardWrapper(gym.Wrapper):
-    def __init__(self, env, flip_target_angle=3.14, angle_tolerance=0.2, reward_scale=5.0):
+    def __init__(self,
+                 env,
+                 angle_index=2,
+                 flip_target_angle=3.14,
+                 angle_tolerance=0.2,
+                 reward_scale=5.0):
         """
-        flip_target_angle: The angle (in radians) that counts as a 'full flip'. 
-                           For a forward flip, ~3.14 rad might be one full rotation from upright 
-                           (depends on how you measure angles).
-        angle_tolerance: The allowable error around flip_target_angle.
-        reward_scale: Extra reward for achieving a flip within the tolerance.
+        angle_index: Which index in the observation array corresponds to the agent's pitch angle.
+        flip_target_angle: The angle (in radians) representing a 'full flip' or desired orientation.
+        angle_tolerance: How close the pitch angle must be to flip_target_angle to get the bonus.
+        reward_scale: Additional reward granted if the agent’s pitch is within angle_tolerance of flip_target_angle.
         """
         super(FlipRewardWrapper, self).__init__(env)
+        self.angle_index = angle_index
         self.flip_target_angle = flip_target_angle
         self.angle_tolerance = angle_tolerance
         self.reward_scale = reward_scale
@@ -27,11 +32,10 @@ class FlipRewardWrapper(gym.Wrapper):
     def step(self, action):
         obs, base_reward, terminated, truncated, info = self.env.step(action)
 
-        # Suppose the agent's pitch angle is in qpos[2]. 
-        # (In HalfCheetah, qpos[0] is x-pos, qpos[1] is z-pos, qpos[2] might be torso angle, etc.)
-        pitch_angle = self.unwrapped.sim.data.qpos[2]
+        # We assume obs[self.angle_index] is the pitch angle
+        pitch_angle = obs[self.angle_index]  # You must verify that obs[2] is indeed pitch angle!
 
-        # Check if the angle is close enough to the target flip angle
+        # Check how close the pitch is to the desired flip angle
         angle_error = abs(self.flip_target_angle - pitch_angle)
         if angle_error <= self.angle_tolerance:
             base_reward += self.reward_scale
