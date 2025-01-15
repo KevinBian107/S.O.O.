@@ -10,12 +10,12 @@ import torch.nn as nn
 import torch.optim as optim
 
 from config import args_sof
-from environments import make_env
+from env.environments import make_env
 from models import *
 from optimization_utils import *
 
 
-def train_sofppo_agent(envs):
+def train_sofppo_agent():
     args_sof.batch_size = args_sof.num_steps * args_sof.num_envs
     args_sof.minibatch_size = args_sof.batch_size // args_sof.num_minibatches
     args_sof.iterations = args_sof.total_timesteps // args_sof.batch_size
@@ -29,9 +29,18 @@ def train_sofppo_agent(envs):
         "cuda" if torch.cuda.is_available() and args_sof.cuda else "cpu"
     )
 
-    # envs = gym.vector.SyncVectorEnv(
-    #     [make_env(args_sof.env_id, i, args_sof.capture_video, args_sof.exp_name, args_sof.gamma) for i in range(args_sof.num_envs)]
-    # )
+    envs = gym.vector.SyncVectorEnv(
+        [
+            make_env(
+                args_sof.env_id,
+                i,
+                args_sof.capture_video,
+                args_sof.exp_name,
+                args_sof.gamma,
+            )
+            for i in range(args_sof.num_envs)
+        ]
+    )
     assert isinstance(
         envs.single_action_space, gym.spaces.Box
     ), "only continuous action space is supported"
@@ -78,6 +87,8 @@ def train_sofppo_agent(envs):
     upn_optimizer = optim.Adam(
         agent.upn.parameters(), lr=args_sof.upn_learning_rate, eps=1e-5
     )
+
+    eta_optimizer = optim.Adam([agent.eta_k], lr=args_sof.eta_learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
     obs = torch.zeros(
@@ -264,6 +275,23 @@ def train_sofppo_agent(envs):
                 # Entropy loss
                 entropy_loss = entropy.mean()
 
+                eta_loss = compute_eta_k_loss(agent, b_advantages, args_sof.epsilon_k)
+
+                # Lagrangian Objective (Adjusted with KL Hidden Distribution Constraint)
+                hidden_dist = compute_hidden_action_distribution(
+                    agent,
+                    b_obs_imitate[mb_inds],
+                    b_advantages[mb_inds],
+                    args_sof.epsilon_k,
+                    agent.eta_k,
+                )
+                kl_constraint_penalty = compute_lagrangian_kl_constraint(
+                    agent,
+                    b_obs_imitate[mb_inds],
+                    agent.eta_k,
+                    args_sof.epsilon_k,
+                    hidden_dist,
+                )
                 recon_loss, forward_loss, inverse_loss, consistency_loss = (
                     compute_upn_loss(
                         agent.upn,
@@ -277,8 +305,8 @@ def train_sofppo_agent(envs):
                     - args_sof.ent_coef * entropy_loss
                     + v_loss * args_sof.vf_coef
                     + approx_kl * args_sof.kl_coef
+                    + kl_constraint_penalty * args_sof.constrain_weights
                 )
-
                 # Previously not on in sfmppo
                 upn_loss = args_sof.upn_coef * (
                     recon_loss + forward_loss + inverse_loss + consistency_loss
@@ -300,6 +328,11 @@ def train_sofppo_agent(envs):
                 upn_loss.backward()
                 nn.utils.clip_grad_norm_(agent.upn.parameters(), args_sof.max_grad_norm)
                 upn_optimizer.step()
+
+                # Only backpropagate the KL penalty through eta_k
+                eta_optimizer.zero_grad()
+                eta_loss.backward()
+                eta_optimizer.step()
 
                 # Clip eta_k to be positive
                 with torch.no_grad():
@@ -334,6 +367,8 @@ def train_sofppo_agent(envs):
         metrics["consist_losses"].append(consistency_loss.item())
         metrics["entropies"].append(entropy_loss.item())
         metrics["approx_kls"].append(approx_kl.item())
+        metrics["kl_constrained_penalty"].append(kl_constraint_penalty.item())
+        metrics["eta_k_loss"].append(eta_loss.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
 
@@ -380,11 +415,17 @@ def train_sofppo_agent(envs):
     plt.xlabel("Episode")
     plt.ylabel("Approx KLs")
 
+    # plt.subplot(2, 3, 3)
+    # plt.plot(metrics["learning_rates"])
+    # plt.title('Learning Rate')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('LR')
+
     plt.subplot(2, 3, 3)
-    plt.plot(metrics["learning_rates"])
-    plt.title("Learning Rate")
+    plt.plot(metrics["kl_constrained_penalty"])
+    plt.title("KL Constraint Penalty")
     plt.xlabel("Iteration")
-    plt.ylabel("LR")
+    plt.ylabel("KL-CP")
 
     plt.subplot(2, 3, 4)
     plt.plot(metrics["value_losses"], label="Value Loss")
@@ -394,6 +435,7 @@ def train_sofppo_agent(envs):
     plt.plot(metrics["inverse_losses"], label="Inverse Loss")
     plt.plot(metrics["recon_losses"], label="Reconstruction Loss")
     plt.plot(metrics["consist_losses"], label="Consistency Loss")
+    plt.plot(metrics["eta_k_loss"], label="Eta K Loss")
     plt.title("Losses")
     plt.xlabel("Iteration")
     plt.ylabel("Loss")

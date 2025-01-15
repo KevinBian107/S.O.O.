@@ -11,7 +11,7 @@ from torch.distributions import Normal
 import torch.nn as nn
 import random
 
-from environments import make_env
+from env.environments import make_env
 from config import args_test
 from models import Agent_ppo as PPOAgent, Agent_sof as SOFAgent
 

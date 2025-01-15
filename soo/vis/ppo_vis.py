@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
 from config import args_test
-from environments import make_env
+from sof.env.environments import make_env
 from models import Agent_ppo as PPOAgent
 
 

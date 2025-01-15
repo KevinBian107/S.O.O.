@@ -6,7 +6,7 @@ class Args_sof:
     exp_name: str = "soo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     device: str = "cpu"
-    total_timesteps: int = 2000000
+    total_timesteps: int = 1000  # 1000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -43,16 +43,17 @@ class Args_sof:
     # this helps greatly for sfmppo
     imitation_data_path: str = None
     mix_coord: bool = False
+    
+    # save path
+    save_sfmppo: str = "soo_ppo.pth"
+    save_sfm: str = "soo_core.pth"
 
+    # loading set in runtime if running sequential tasks
     # data need to match up, this data may be problematic
     load_upn: str = "supervised_wm.pth"
 
     # can still use this becuase only load in PPO
     load_sfmppo: str = "sfmppo_stable.pth"
-
-    # save path
-    save_sfm: str = "sof_trained.pth"
-    save_sfmppo: str = "sooppo_trained.pth"
 
     # to be set at runtime
     batch_size: int = 0

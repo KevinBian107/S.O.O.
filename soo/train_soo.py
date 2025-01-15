@@ -10,12 +10,12 @@ import torch.nn as nn
 import torch.optim as optim
 
 from config import args_sof
-from environments import make_env
+from env.environments import make_env
 from models import *
 from optimization_utils import *
 
 
-def train_sofppo_agent():
+def train_sofppo_agent(envs=None):
     args_sof.batch_size = args_sof.num_steps * args_sof.num_envs
     args_sof.minibatch_size = args_sof.batch_size // args_sof.num_minibatches
     args_sof.iterations = args_sof.total_timesteps // args_sof.batch_size
@@ -29,18 +29,19 @@ def train_sofppo_agent():
         "cuda" if torch.cuda.is_available() and args_sof.cuda else "cpu"
     )
 
-    envs = gym.vector.SyncVectorEnv(
-        [
-            make_env(
-                args_sof.env_id,
-                i,
-                args_sof.capture_video,
-                args_sof.exp_name,
-                args_sof.gamma,
-            )
-            for i in range(args_sof.num_envs)
-        ]
-    )
+    if envs == None:
+        envs = gym.vector.SyncVectorEnv(
+            [
+                make_env(
+                    args_sof.env_id,
+                    i,
+                    args_sof.capture_video,
+                    args_sof.exp_name,
+                    args_sof.gamma,
+                )
+                for i in range(args_sof.num_envs)
+            ]
+        )
     assert isinstance(
         envs.single_action_space, gym.spaces.Box
     ), "only continuous action space is supported"
@@ -49,26 +50,25 @@ def train_sofppo_agent():
 
     # freeze_base_controller(agent)
 
+    soo_save_dir = os.path.join(os.getcwd(), "params", "multi_task", "soo_ppo")
     if args_sof.load_sfmppo is not None:
-        save_dir = os.path.join(os.getcwd(), "sof", "params", "sofppo")
-        data_path = os.path.join(save_dir, args_sof.load_sfmppo)
+        data_path = os.path.join(soo_save_dir, args_sof.load_sfmppo)
         if os.path.exists(data_path):
-            print(f"Loading sfmppo model from {data_path}")
+            print(f"Loading full sooppo model from {data_path}")
             agent.load_ppo(data_path)  # Use the new method to load only PPO parameters
         else:
             print(
                 f"Model file not found at {data_path}. Starting training from scratch."
             )
-
+    
+    upn_save_dir = os.path.join(os.getcwd(), "params", "multi_task", "soo_core")
     if args_sof.load_upn is not None:
         # if args_sof.load_sfmppo is not None:
         #     print('Loading Full model, cannot load sfm core')
         # else:
-        # Define the path to save and load UPN weights
         print("loaded params for supervised forward model")
-        model_dir = os.path.join(os.getcwd(), "sof", "params", "supp")
-        os.makedirs(model_dir, exist_ok=True)
-        load_path = os.path.join(model_dir, args_sof.load_upn)
+        os.makedirs(upn_save_dir, exist_ok=True)
+        load_path = os.path.join(upn_save_dir, args_sof.load_upn)
         # Attempt to load UPN weights
         agent.load_upn(load_path)
 
@@ -87,8 +87,6 @@ def train_sofppo_agent():
     upn_optimizer = optim.Adam(
         agent.upn.parameters(), lr=args_sof.upn_learning_rate, eps=1e-5
     )
-
-    eta_optimizer = optim.Adam([agent.eta_k], lr=args_sof.eta_learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
     obs = torch.zeros(
@@ -275,23 +273,6 @@ def train_sofppo_agent():
                 # Entropy loss
                 entropy_loss = entropy.mean()
 
-                eta_loss = compute_eta_k_loss(agent, b_advantages, args_sof.epsilon_k)
-
-                # Lagrangian Objective (Adjusted with KL Hidden Distribution Constraint)
-                hidden_dist = compute_hidden_action_distribution(
-                    agent,
-                    b_obs_imitate[mb_inds],
-                    b_advantages[mb_inds],
-                    args_sof.epsilon_k,
-                    agent.eta_k,
-                )
-                kl_constraint_penalty = compute_lagrangian_kl_constraint(
-                    agent,
-                    b_obs_imitate[mb_inds],
-                    agent.eta_k,
-                    args_sof.epsilon_k,
-                    hidden_dist,
-                )
                 recon_loss, forward_loss, inverse_loss, consistency_loss = (
                     compute_upn_loss(
                         agent.upn,
@@ -305,8 +286,8 @@ def train_sofppo_agent():
                     - args_sof.ent_coef * entropy_loss
                     + v_loss * args_sof.vf_coef
                     + approx_kl * args_sof.kl_coef
-                    + kl_constraint_penalty * args_sof.constrain_weights
                 )
+
                 # Previously not on in sfmppo
                 upn_loss = args_sof.upn_coef * (
                     recon_loss + forward_loss + inverse_loss + consistency_loss
@@ -328,11 +309,6 @@ def train_sofppo_agent():
                 upn_loss.backward()
                 nn.utils.clip_grad_norm_(agent.upn.parameters(), args_sof.max_grad_norm)
                 upn_optimizer.step()
-
-                # Only backpropagate the KL penalty through eta_k
-                eta_optimizer.zero_grad()
-                eta_loss.backward()
-                eta_optimizer.step()
 
                 # Clip eta_k to be positive
                 with torch.no_grad():
@@ -367,8 +343,6 @@ def train_sofppo_agent():
         metrics["consist_losses"].append(consistency_loss.item())
         metrics["entropies"].append(entropy_loss.item())
         metrics["approx_kls"].append(approx_kl.item())
-        metrics["kl_constrained_penalty"].append(kl_constraint_penalty.item())
-        metrics["eta_k_loss"].append(eta_loss.item())
         metrics["clipfracs"].append(np.mean(clipfracs_batch))
         metrics["explained_variances"].append(explained_var)
 
@@ -415,17 +389,11 @@ def train_sofppo_agent():
     plt.xlabel("Episode")
     plt.ylabel("Approx KLs")
 
-    # plt.subplot(2, 3, 3)
-    # plt.plot(metrics["learning_rates"])
-    # plt.title('Learning Rate')
-    # plt.xlabel('Iteration')
-    # plt.ylabel('LR')
-
     plt.subplot(2, 3, 3)
-    plt.plot(metrics["kl_constrained_penalty"])
-    plt.title("KL Constraint Penalty")
+    plt.plot(metrics["learning_rates"])
+    plt.title("Learning Rate")
     plt.xlabel("Iteration")
-    plt.ylabel("KL-CP")
+    plt.ylabel("LR")
 
     plt.subplot(2, 3, 4)
     plt.plot(metrics["value_losses"], label="Value Loss")
@@ -435,7 +403,6 @@ def train_sofppo_agent():
     plt.plot(metrics["inverse_losses"], label="Inverse Loss")
     plt.plot(metrics["recon_losses"], label="Reconstruction Loss")
     plt.plot(metrics["consist_losses"], label="Consistency Loss")
-    plt.plot(metrics["eta_k_loss"], label="Eta K Loss")
     plt.title("Losses")
     plt.xlabel("Iteration")
     plt.ylabel("Loss")
@@ -458,12 +425,13 @@ def train_sofppo_agent():
     plt.show()
 
     # Save the model
-    save_dir1 = os.path.join(os.getcwd(), "sof", "params", "sofppo")
-    save_dir2 = os.path.join(os.getcwd(), "sof", "params", "sof")
-    os.makedirs(save_dir, exist_ok=True)
+    soo_save_dir1 = os.path.join(os.getcwd(), "params", "multi_task", "soo_ppo")
+    soo_save_dir2 = os.path.join(os.getcwd(), "params", "multi_task", "soo_core")
+    os.makedirs(soo_save_dir, exist_ok=True)
+    os.makedirs(upn_save_dir, exist_ok=True)
 
-    data1_path = os.path.join(save_dir1, args_sof.save_sfmppo)
-    data2_path = os.path.join(save_dir2, args_sof.save_sfm)
+    data1_path = os.path.join(soo_save_dir1, args_sof.save_sfmppo)
+    data2_path = os.path.join(soo_save_dir2, args_sof.save_sfm)
 
     print("Saved at: ", data1_path)
     torch.save(agent.state_dict(), data1_path)

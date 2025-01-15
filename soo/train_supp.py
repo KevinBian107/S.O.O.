@@ -72,7 +72,7 @@ def train_supp():
     device = torch.device(
         "cuda" if torch.cuda.is_available() and args_supp.cuda else "cpu"
     )
-    save_dir = os.path.join(os.getcwd(), "sof", "data")
+    save_dir = os.path.join(os.getcwd(), "data")
     os.makedirs(save_dir, exist_ok=True)
     data_path = os.path.join(save_dir, args_supp.imitate_data_path)
     states, actions, next_states = load_supp_data(file_path=data_path)
@@ -135,7 +135,7 @@ def train_supp():
 
     # plot_supp_losses(train_losses, val_losses)
 
-    save_dir = os.path.join(os.getcwd(), "sof", "params", "supp")
+    save_dir = os.path.join(os.getcwd(), "params", "multi_task", "supp")
     os.makedirs(save_dir, exist_ok=True)
     model_path = os.path.join(save_dir, args_supp.save_supp_path)
     torch.save(model.state_dict(), model_path)

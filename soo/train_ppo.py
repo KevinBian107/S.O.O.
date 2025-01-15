@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from config import args_ppo
-from environments import make_env
+from env.environments import make_env
 from models import *
 from optimization_utils import *
 
@@ -48,7 +48,7 @@ def train_ppo_agent():
     agent = Agent_ppo(envs).to(args_ppo.device)
 
     if args_ppo.load_model is not None:
-        save_dir = os.path.join(os.getcwd(), "sof", "params", "ppo")
+        save_dir = os.path.join(os.getcwd(), "params", "multi_task", "ppo")
         data_path = os.path.join(save_dir, args_ppo.load_model)
         if os.path.exists(data_path):
             print(f"Loading model from {data_path}")
@@ -333,7 +333,7 @@ def train_ppo_agent():
     plt.savefig("ppo_results.png")
     plt.show()
 
-    save_dir = os.path.join(os.getcwd(), "sof", "params", "ppo")
+    save_dir = os.path.join(os.getcwd(), "params", "multi_task", "ppo")
     os.makedirs(save_dir, exist_ok=True)
 
     import re
