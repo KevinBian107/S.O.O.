@@ -14,7 +14,7 @@ class Args_sof:
     ppo_learning_rate: float = 6e-5
     upn_learning_rate: float = 8e-6
     eta_learning_rate: float = 8e-6
-    latent_size: int = 90
+    latent_size: int = 100
     upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
     num_envs: int = 1

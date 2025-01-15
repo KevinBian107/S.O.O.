@@ -50,7 +50,7 @@ def train_sofppo_agent(envs=None):
 
     # freeze_base_controller(agent)
 
-    soo_save_dir = os.path.join(os.getcwd(), "params", "multi_task", "soo_ppo")
+    soo_save_dir = os.path.join(os.getcwd(), "params", "soo_ppo")
     if args_sof.load_sfmppo is not None:
         data_path = os.path.join(soo_save_dir, args_sof.load_sfmppo)
         if os.path.exists(data_path):
@@ -61,7 +61,7 @@ def train_sofppo_agent(envs=None):
                 f"Model file not found at {data_path}. Starting training from scratch."
             )
     
-    upn_save_dir = os.path.join(os.getcwd(), "params", "multi_task", "soo_core")
+    upn_save_dir = os.path.join(os.getcwd(), "params", "soo_core")
     if args_sof.load_upn is not None:
         # if args_sof.load_sfmppo is not None:
         #     print('Loading Full model, cannot load sfm core')
