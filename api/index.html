@@ -107,29 +107,29 @@ and activate the conda environment by:
 <p>This is how to train S.O.O. on your local computer with CPU. All configurrations are specified in the config files.</p>
 <ol>
 <li>
-<p>All the configurations are in the <a href="https://github.com/KevinBian107/S.O.O./blob/main/sof/config.py">config python file</a></p>
+<p>All the configurations are in the <a href="https://github.com/KevinBian107/S.O.O./blob/main/soo/config.py">config python file</a></p>
 </li>
 <li>
 <p>We established a few training script for training S.O.O.</p>
 <ul>
 <li>
 <p>Training a plain PPO with customized hyperparemetr specified in the configs:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_ppo</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">train_ppo</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Training just S.O.O. with either with or without the pre-trained core (specify in the configs):
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_soo</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">train_soo</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 <li>
-<p>Training just the transfered SOF core with intention data specified in the config path:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_supp</span><span class="o">.</span><span class="n">py</span>
+<p>Training just the transfered soo core with intention data specified in the config path:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">train_supp</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Training the full pipeline all at once sequentially:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">train_sequential</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">train_sequential</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 </ul>
@@ -139,15 +139,15 @@ and activate the conda environment by:
 <ul>
 <li>
 <p>Testing functions on specified environmental conditions, which takes in configs in the config file as well:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">test</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 <li>
 <p>Visualization of the latent representation of gait cycle, depending on either ppo or soo is used, the code is different:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">ppo_vis</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">ppo_vis</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div>
 and
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">python</span> <span class="n">sof</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">sof_vis</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">python</span> <span class="n">soo</span><span class="o">/</span><span class="n">vis</span><span class="o">/</span><span class="n">soo_vis</span><span class="o">.</span><span class="n">py</span>
 </code></pre></div></p>
 </li>
 <li>
