@@ -120,7 +120,7 @@ class Agent_sof(nn.Module):
             layer_init(nn.Linear(args_sof.ppo_hidden_layer, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(latent_dim + state_dim, args_sof.ppo_hidden_layer)),
+            layer_init(nn.Linear(latent_dim, args_sof.ppo_hidden_layer)),
             nn.Tanh(),
             layer_init(nn.Linear(args_sof.ppo_hidden_layer, args_sof.ppo_hidden_layer)),
             nn.Tanh(),
@@ -147,10 +147,10 @@ class Agent_sof(nn.Module):
     def get_action_and_value(self, x, action=None):
         mu, logvar = self.upn.encode(x)
         z = self.upn.reparameterize(mu, logvar)
-        z_norm = self.normalize_if_batch(z)
-        x_norm = self.normalize_if_batch(x)
-        state_latent = torch.cat([z_norm, x_norm], dim=-1)
-        action_mean = self.actor_mean(state_latent)
+        # z_norm = self.normalize_if_batch(z)
+        # x_norm = self.normalize_if_batch(x)
+        # state_latent = torch.cat([z_norm, x_norm], dim=-1)
+        action_mean = self.actor_mean(z)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)

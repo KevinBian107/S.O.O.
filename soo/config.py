@@ -14,7 +14,7 @@ class Args_sof:
     ppo_learning_rate: float = 6e-5
     upn_learning_rate: float = 8e-6
     eta_learning_rate: float = 8e-6
-    latent_size: int = 100
+    latent_size: int = 90
     upn_hidden_layer: int = 64
     ppo_hidden_layer: int = 256
     num_envs: int = 1
@@ -30,15 +30,15 @@ class Args_sof:
     clip_vloss: bool = True
     ent_coef: float = 0.01
     vf_coef: float = 0.5
-    kl_coef: float = 0.1
-    upn_coef: float = 0.8
+    kl_coef: float = 0.01
+    upn_coef: float = 0.5
     max_grad_norm: float = 0.5
 
     # exactly how far we want distribution to be
     epsilon_k: float = 0.01
 
     # when constrain_weights is zero, no EM constrain
-    constrain_weights: float = 0.5
+    constrain_weights: float = 0.8
 
     # this helps greatly for sfmppo
     imitation_data_path: str = None
