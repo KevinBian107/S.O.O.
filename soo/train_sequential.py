@@ -110,7 +110,7 @@ def train_multiple_tasks_sequentially():
         env_id = task_info["env_id"]
         task_name = task_info["name"]
         wrappers = task_info["wrappers"]
-        print(wrappers)
+        wrappers = None if i == 0 else wrappers
 
         # Build a vectorized environment for the current task.
         cur_env = gym.vector.SyncVectorEnv(

@@ -120,7 +120,7 @@ class Agent_sof(nn.Module):
             layer_init(nn.Linear(args_sof.ppo_hidden_layer, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(latent_dim, args_sof.ppo_hidden_layer)),
+            layer_init(nn.Linear(latent_dim + state_dim, args_sof.ppo_hidden_layer)),
             nn.Tanh(),
             layer_init(nn.Linear(args_sof.ppo_hidden_layer, args_sof.ppo_hidden_layer)),
             nn.Tanh(),
@@ -135,11 +135,22 @@ class Agent_sof(nn.Module):
         # Reparameterize to sample z from the distribution
         z = self.upn.reparameterize(mu, logvar)
         return self.critic(z)
+    
+    def normalize_if_batch(self, x):
+        # if z is shaped [batch_size, ...], check if batch_size > 1
+        if x.shape[0] > 1:
+            return (x - x.mean(dim=0)) / (x.std(dim=0) + 1e-8)
+        else:
+            # If batch_size <= 1, just return z unchanged
+            return x
 
     def get_action_and_value(self, x, action=None):
         mu, logvar = self.upn.encode(x)
         z = self.upn.reparameterize(mu, logvar)
-        action_mean = self.actor_mean(z)
+        z_norm = self.normalize_if_batch(z)
+        x_norm = self.normalize_if_batch(x)
+        state_latent = torch.cat([z_norm, x_norm], dim=-1)
+        action_mean = self.actor_mean(state_latent)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
@@ -154,13 +165,13 @@ class Agent_sof(nn.Module):
             self.critic(z),
         )
 
-    def get_transformed_action_distribution(self, z):
-        """Map action space to latent space dimension, both action mean and action logstd"""
-        action_mean = self.actor_mean(z)
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_latent_mean = self.action_mean_to_latent(action_mean)
-        action_latent_var = self.action_var_to_latent(action_logstd)
-        return action_latent_mean, action_latent_var
+    # def get_transformed_action_distribution(self, z):
+    #     """Map action space to latent space dimension, both action mean and action logstd"""
+    #     action_mean = self.actor_mean(z)
+    #     action_logstd = self.actor_logstd.expand_as(action_mean)
+    #     action_latent_mean = self.action_mean_to_latent(action_mean)
+    #     action_latent_var = self.action_var_to_latent(action_logstd)
+    #     return action_latent_mean, action_latent_var
 
     def load_upn(self, file_path):
         """Load only the UPN model parameters from the specified file path,
