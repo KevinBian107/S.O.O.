@@ -48,7 +48,7 @@ def train_ppo_agent():
     agent = Agent_ppo(envs).to(args_ppo.device)
 
     if args_ppo.load_model is not None:
-        save_dir = os.path.join(os.getcwd(), "params", "multi_task", "ppo")
+        save_dir = os.path.join(os.getcwd(), "params", "ppo")
         data_path = os.path.join(save_dir, args_ppo.load_model)
         if os.path.exists(data_path):
             print(f"Loading model from {data_path}")
@@ -333,7 +333,7 @@ def train_ppo_agent():
     plt.savefig("ppo_results.png")
     plt.show()
 
-    save_dir = os.path.join(os.getcwd(), "params", "multi_task", "ppo")
+    save_dir = os.path.join(os.getcwd(), "params","ppo")
     os.makedirs(save_dir, exist_ok=True)
 
     import re

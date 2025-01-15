@@ -6,7 +6,7 @@ class Args_sof:
     exp_name: str = "soo_halfcheetah"
     env_id: str = "HalfCheetah-v4"
     device: str = "cpu"
-    total_timesteps: int = 1000000
+    total_timesteps: int = 1000  # 1000000
     torch_deterministic: bool = True
     cuda: bool = True
     capture_video: bool = True
@@ -30,8 +30,8 @@ class Args_sof:
     clip_vloss: bool = True
     ent_coef: float = 0.01
     vf_coef: float = 0.5
-    kl_coef: float = 0.01
-    upn_coef: float = 0.5
+    kl_coef: float = 0.1
+    upn_coef: float = 0.8
     max_grad_norm: float = 0.5
 
     # exactly how far we want distribution to be
@@ -91,7 +91,7 @@ class Args_ppo:
     max_grad_norm: float = 0.5
     action_reg_coef: float = 0.0
     load_model: str = None
-    save_path: str = "ppo_jump_intention.pth"
+    save_path: str = "ppo_standard.pth"
 
     # to be filled in runtime
     batch_size: int = 0
