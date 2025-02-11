@@ -3,7 +3,9 @@ import torch
 import numpy as np
 import gymnasium as gym
 import random
-from ppo import Agent, Args, make_env
+from env.environments import make_env
+from config import args_ppo
+from models import Agent_ppo
 
 # ensured good coordinate
 
@@ -26,7 +28,7 @@ def collect_demonstration_data(agent, envs, device, num_episodes=50):
     total_rewards = []
     
     for episode in range(num_episodes):
-        obs, _ = envs.reset(seed=args.seed)
+        obs, _ = envs.reset(seed=args_ppo.seed)
         obs = torch.Tensor(obs).to(device)
         done = False
         episode_reward = 0
@@ -62,24 +64,23 @@ def collect_demonstration_data(agent, envs, device, num_episodes=50):
 
 if __name__ == "__main__":
     # Initialize arguments and set seeds
-    args = Args()
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
+    random.seed(args_ppo.seed)
+    np.random.seed(args_ppo.seed)
+    torch.manual_seed(args_ppo.seed)
+    torch.backends.cudnn.deterministic = args_ppo.torch_deterministic
     
     # Set up device
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and args_ppo.cuda else "cpu")
     print(f"Using device: {device}")
     
     # Create environment
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, args.exp_name, args.gamma) for i in range(args.num_envs)]
+        [make_env(args_ppo.env_id, i, args_ppo.capture_video, args_ppo.exp_name, args_ppo.gamma) for i in range(args_ppo.num_envs)]
     )
     
     # Load model
     model_path = os.path.join(os.getcwd(), 'sfm', 'params', 'ppo/ppo_no_flip_jump_intention.pth')
-    agent = load_agent(Agent, model_path, envs, device)
+    agent = load_agent(Agent_ppo, model_path, envs, device)
     
     if agent is None:
         print("Failed to load agent. Exiting...")
